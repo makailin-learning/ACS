@@ -4,7 +4,6 @@ import torch.nn.functional as F
 import numpy as np
 import math
 
-
 #转换一：3x3conv和bn融合
 def I_fusebn(kernel, bn):
     #传入的kernel为卷积权重，bn为BN网络层结构

@@ -16,10 +16,10 @@ __all__ = ['ResNet50', 'ResNet101','ResNet152']
 # 模块化之前：7x7 卷积一个，3x3最大池化一个,步距均为2
 def Conv1(in_planes, places, stride=2):
     return nn.Sequential(
-        nn.Conv2d(in_channels=in_planes,out_channels=places,kernel_size=7,stride=stride,padding=3, bias=False),
-        nn.BatchNorm2d(places),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+           nn.Conv2d(in_channels=in_planes,out_channels=places,kernel_size=7,stride=stride,padding=3, bias=False),
+           nn.BatchNorm2d(places),
+           nn.ReLU(inplace=True),
+           nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
     )
 
 class Bottleneck(nn.Module):

@@ -1,5 +1,35 @@
-from model.utils import *
+from model.model_utils import *
 from torchsummary import summary
+
+class ConvBN(nn.Module):
+    def __init__(self, in_channels, kernel_size, deploy=False, activation=None):
+        super().__init__()
+        if activation is None:
+            self.activation = nn.Identity()
+        else:
+            self.activation = activation
+        if deploy:
+            self.reparam = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=1, padding=kernel_size//2, bias=True)
+        else:
+            self.conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=1, padding=kernel_size//2, bias=False)
+            self.bn = nn.BatchNorm2d(num_features=in_channels)
+
+    def forward(self, x):
+        if hasattr(self, 'reparam'):
+            return self.activation(self.reparam(x))
+        else:
+            return self.activation(self.bn(self.conv(x)))
+
+    def switch_to_deploy(self):
+        kernel, bias = I_fusebn(self.conv.weight, self.bn)
+        self.reparam = nn.Conv2d(in_channels=self.conv.in_channels, out_channels=self.conv.out_channels, kernel_size=self.conv.kernel_size,
+                                      stride=self.conv.stride, padding=self.conv.padding, dilation=self.conv.dilation, groups=self.conv.groups, bias=True)
+        self.reparam.weight.data = kernel
+        self.reparam.bias.data = bias
+        for para in self.parameters():
+            para.detach_()
+        self.__delattr__('conv')
+        self.__delattr__('bn')
 
 class ACS(nn.Module):
     def __init__(self, in_channels, kernel_size=3, deploy=False, activation=None):
@@ -146,24 +176,4 @@ class ACS(nn.Module):
         self.__delattr__('acs_avg')
         self.__delattr__('acs_1x1')
         self.__delattr__('acs_3x3')
-
-diff=[]
-for i in range(5):
-    m=ACS(in_channels=64,kernel_size=3,deploy=False,activation=nn.ReLU())
-    # 这段代码的用途？
-    # for module in m.modules():
-    #     if isinstance(module, torch.nn.BatchNorm2d):
-    #         nn.init.uniform_(module.running_mean, 0, 0.1)
-    #         nn.init.uniform_(module.running_var, 0, 0.1)
-    #         nn.init.uniform_(module.weight, 0, 0.1)
-    #         nn.init.uniform_(module.bias, 0, 0.1)
-    x=torch.rand([64,64,64,64])
-    m.eval()
-    train_y = m(x)
-    m.switch_to_deploy()
-    deploy_y = m(x)
-    diff.append(((train_y - deploy_y) ** 2).sum())
-print('diff =',diff)
-
-
 

@@ -19,60 +19,21 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f67cb0a8-87f3-4e71-92ad-9e5296682f14" name="Default Changelist" comment="" />
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <list default="true" id="f67cb0a8-87f3-4e71-92ad-9e5296682f14" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/model/verify.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/ACS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ACS.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/ResNet.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/ResNet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/common.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/model_utils.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
-  </component>
-  <component name="FileEditorManager">
-    <leaf>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/model/common.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1113">
-              <caret line="66" column="46" lean-forward="true" selection-start-line="66" selection-start-column="46" selection-end-line="66" selection-end-column="46" />
-              <folding>
-                <element signature="e#0#25#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/model/utils.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1759">
-              <folding>
-                <element signature="e#0#12#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/model/models.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-687">
-              <caret line="50" selection-start-line="50" selection-end-line="50" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/model/ResNet.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="136">
-              <caret line="8" column="18" lean-forward="true" selection-start-line="8" selection-start-column="18" selection-end-line="8" selection-end-column="18" />
-              <folding>
-                <element signature="e#42#54#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -132,27 +93,15 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="reference.settingsdialog.IDE.editor.colors.Python" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../repvgg/repmlp" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\github\ACS\model" />
     </key>
   </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
-  <component name="RunManager" selected="Python.common">
+  <component name="RunManager" selected="Python tests.pytest for verify.test_1">
     <configuration name="common" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ACS" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -167,6 +116,27 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/model/common.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="models" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ACS" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/model" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/model/models.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -197,13 +167,54 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="verify" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ACS" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/model" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/model/verify.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest for verify.test_1" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="ACS" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/model" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;verify.test_1&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.pytest for verify.test_1" />
+        <item itemvalue="Python.models" />
+        <item itemvalue="Python.verify" />
         <item itemvalue="Python.common" />
         <item itemvalue="Python.test" />
       </list>
     </recent_temporary>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -263,14 +274,7 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="RECENTLY_FILTERED_USER_GROUPS">
-                <collection />
-              </option>
-              <option name="RECENTLY_FILTERED_BRANCH_GROUPS">
-                <collection />
-              </option>
-            </State>
+            <State />
           </value>
         </entry>
       </map>
@@ -289,48 +293,7 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="WindowStateProjectService">
-    <state x="549" y="167" key="FileChooserDialogImpl" timestamp="1630913738918">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1630913738918" />
-    <state width="1493" height="176" key="GridCell.Tab.0.bottom" timestamp="1630917422999">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="176" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1630917422999" />
-    <state width="1493" height="176" key="GridCell.Tab.0.center" timestamp="1630917422999">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="176" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1630917422999" />
-    <state width="1493" height="176" key="GridCell.Tab.0.left" timestamp="1630917422999">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="176" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1630917422999" />
-    <state width="1493" height="176" key="GridCell.Tab.0.right" timestamp="1630917422999">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="176" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1630917422999" />
-    <state width="1478" height="258" key="GridCell.Tab.1.bottom" timestamp="1630774588316">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1478" height="258" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1630774588316" />
-    <state width="1478" height="258" key="GridCell.Tab.1.center" timestamp="1630774588316">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1478" height="258" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1630774588316" />
-    <state width="1478" height="258" key="GridCell.Tab.1.left" timestamp="1630774588316">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1478" height="258" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1630774588316" />
-    <state width="1478" height="258" key="GridCell.Tab.1.right" timestamp="1630774588316">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1478" height="258" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1630774588316" />
-  </component>
-  <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/ACS$common.coverage" NAME="common Coverage Results" MODIFIED="1630917399833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/model" />
-    <SUITE FILE_PATH="coverage/ACS$test.coverage" NAME="test Coverage Results" MODIFIED="1630911355075" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/model" />
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/model/utils.py">

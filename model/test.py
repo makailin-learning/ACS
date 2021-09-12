@@ -1,5 +1,5 @@
-from model.utils import *
-from model.utils import _fuse_bn_tensor
+from model.model_utils import *
+from model.model_utils import _fuse_bn_tensor
 x=torch.rand([2,2,13,13])
 
 #测试1x1的卷积核扩展为3x3的卷积核  分支1x1
