@@ -2,16 +2,16 @@ from model.model_utils import *
 from torchsummary import summary
 
 class ConvBN(nn.Module):
-    def __init__(self, in_channels, kernel_size, deploy=False, activation=None):
+    def __init__(self, in_channels, kernel_size=3, stride=1, padding=1, deploy=False, activation=None):
         super().__init__()
         if activation is None:
             self.activation = nn.Identity()
         else:
             self.activation = activation
         if deploy:
-            self.reparam = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=1, padding=kernel_size//2, bias=True)
+            self.reparam = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=True)
         else:
-            self.conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=1, padding=kernel_size//2, bias=False)
+            self.conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
             self.bn = nn.BatchNorm2d(num_features=in_channels)
 
     def forward(self, x):
@@ -32,7 +32,7 @@ class ConvBN(nn.Module):
         self.__delattr__('bn')
 
 class ACS(nn.Module):
-    def __init__(self, in_channels, kernel_size=3, deploy=False, activation=None):
+    def __init__(self, in_channels, kernel_size=3, stride=1, padding=1, deploy=False, activation=None):
         super(ACS,self).__init__()
 
         self.deploy = deploy
@@ -44,42 +44,51 @@ class ACS(nn.Module):
         else:
             self.activation = activation
 
+        assert kernel_size//2==padding,"kernel_size 与 padding 不匹配"
+
         # 推理时过一个融合分支reparam
         if deploy:
             self.acs_reparam = nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
-                                         kernel_size=3, stride=1, padding=1, bias=True)
+                                         kernel_size=kernel_size, stride=stride, padding=padding, bias=True)
         else:
             # 1x1 分支
             self.acs_1x1 = nn.Conv2d(in_channels=in_channels, out_channels=self.mid_channels,
-                                     kernel_size=1, stride=1, padding=0, bias=True)
+                                     kernel_size=1, stride=stride, padding=0, bias=True)
             # 1x1-bn-3x3分支
             self.acs_3x3 = nn.Sequential()
             self.acs_3x3.add_module("conv1",nn.Conv2d(in_channels=in_channels, out_channels=self.mid_channels,
                                                       kernel_size=1, stride=1, padding=0, bias=False))
             self.acs_3x3.add_module("bn", nn.BatchNorm2d(self.mid_channels))
             self.acs_3x3.add_module("conv3",nn.Conv2d(in_channels=self.mid_channels,out_channels=self.mid_channels,
-                                                      kernel_size=3, stride=1, padding=1, bias=True))
+                                                      kernel_size=kernel_size, stride=stride, padding=padding, bias=True))
 
             # 3x3分支
             self.acs_main = nn.Conv2d(in_channels=in_channels, out_channels=self.mid_channels,
-                                      kernel_size=3, stride=1, padding=1, bias=True)
+                                      kernel_size=kernel_size, stride=stride, padding=padding, bias=True)
 
             # 1x1-bn-avg分支
             self.acs_avg = nn.Sequential()
             self.acs_avg.add_module("conv1",nn.Conv2d(in_channels=in_channels, out_channels=self.mid_channels,
                                                       kernel_size=1, stride=1, padding=0, bias=False))
             self.acs_avg.add_module("bn",nn.BatchNorm2d(self.mid_channels))
-            self.acs_avg.add_module("avg",nn.AvgPool2d(kernel_size=3, stride=1, padding=1))
+            self.acs_avg.add_module("avg",nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding))
 
-            # 后处理
-            self.acs_channel = nn.AdaptiveMaxPool2d(output_size=1)
-            self.bn=nn.BatchNorm2d(in_channels)
-            self.cat_score = nn.ReLU()
+        # 后处理
+        self.acs_channel = nn.AdaptiveMaxPool2d(output_size=1)
+        self.bn=nn.BatchNorm2d(in_channels)
+        self.cat_score = nn.ReLU()
+        if stride!=1:
+            self.shortcut = nn.Sequential()
+            self.shortcut.add_module('conv', nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=stride))
+            self.shortcut.add_module('bn', nn.BatchNorm2d(in_channels))
+        else:
+            self.shortcut = nn.Identity()
 
     def forward(self,x):
 
-        b, c, h, w = x.shape
-
+        # 注意这里这个坑,h/w是会进行下采样的,采用原来的h/w,在进行batch resize时，会抵充通道数
+        b, c, h, w = self.shortcut(x).shape
+        # print('输入结果',self.shortcut(x).shape)
         if not hasattr(self, 'acs_reparam'):
 
             # 获得拼接乘数
@@ -105,19 +114,22 @@ class ACS(nn.Module):
             c_score = c_score.reshape(b,-1)
             c_index = torch.topk(c_score, k=c, dim=1, largest=True, sorted=True).indices
             c_index = c_index.sort(dim=1).values
-            c_offset = torch.arange(0, b).reshape(-1, 1)
+            c_offset = torch.arange(0, b, device=x.device).reshape(-1, 1)
             c_index = c_index + c_offset * mid_c
             self.c_mask = c_index.reshape(-1)
 
         else:
             out = self.acs_reparam(x)
 
+        # print('拼接结果',out.shape)
         out = out.reshape(-1, h, w)
+        # print('batch拼接结果', out.shape)
         out = out[self.c_mask, :, :]
         out = out.reshape(b, -1, h, w)
+        # print('batch结果',out.shape)
         out = self.activation(self.bn(out))
 
-        out = out + x
+        out = out + self.shortcut(x)
 
         return out
 
@@ -143,7 +155,7 @@ class ACS(nn.Module):
 
         # 1x1-avg分支
         k_1x1_avg_first, b_1x1_avg_first = I_fusebn(self.acs_avg.conv1.weight, self.acs_avg.bn)
-        k_avg = V_avg(self.mid_channels, self.kernel_size)
+        k_avg = V_avg(self.mid_channels, self.kernel_size).to(k_main.device)
         k_1x1_avg_second, b_1x1_avg_second = k_avg,torch.zeros(k_avg.shape[0],device=k_avg.device)
 
         k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first*self.param[3], b_1x1_avg_first,

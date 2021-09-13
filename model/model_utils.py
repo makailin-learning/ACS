@@ -46,7 +46,7 @@ def III_1x1_3x3(k1, b1, k2, b2, groups=1):
             k2_slice = k2[g*k2_group_width:(g+1)*k2_group_width, :, :, :]
             k_slices.append(F.conv2d(k2_slice, k1_T_slice))
             b_slices.append((k2_slice * b1[g*k1_group_width:(g+1)*k1_group_width].reshape(1, -1, 1, 1)).sum((1, 2, 3)))
-        k, b_hat = transIV_depthconcat(k_slices, b_slices)
+        k, b_hat = IV_concat(k_slices, b_slices)
     return k, b_hat + b2
 
 #转换四：concat

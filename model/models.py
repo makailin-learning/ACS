@@ -1,7 +1,4 @@
-import torch.nn as nn
-import torch.nn.functional as F
-from common import *
-#from convnet_utils import conv_bn, conv_bn_relu
+from model.common import *
 
 # (ACS+ACS / ConvBN+ConvBN | shortcut) + relu
 class BasicBlock(nn.Module):
@@ -38,7 +35,7 @@ class Bottleneck(nn.Module):
         if stride != 1 or in_ch != self.expansion*out_ch:
             self.shortcut =nn.Sequential()
             self.shortcut.add_module('conv',nn.Conv2d(in_ch, self.expansion*out_ch, kernel_size=1, stride=stride))
-            self.shortcut.add_module(('bn',nn.BatchNorm2d(self.expansion*out_ch)))
+            self.shortcut.add_module('bn',nn.BatchNorm2d(self.expansion*out_ch))
         else:
             self.shortcut = nn.Identity()
         # 1x1 4c-c
@@ -46,27 +43,30 @@ class Bottleneck(nn.Module):
         self.conv1.add_module('conv1_1',nn.Conv2d(in_ch,out_ch,kernel_size=1))
         self.conv1.add_module('bn',nn.BatchNorm2d(out_ch))
         self.conv1.add_module('relu',nn.ReLU())
-        # 3x3 c-c
+        # 3x3 c-c 负责调整size,前后两个1x1负责调整通道数
         if is_acs:
-            self.conv2 = ACS(out_ch, kernel_size=3, deploy=False, activation=nn.ReLU())
+            self.conv2 = ACS(out_ch, kernel_size=3, stride=stride, padding=1, deploy=False, activation=nn.ReLU())
         else:
-            self.conv2 = ConvBN(out_ch,kernel_size=3,deploy=False, activation=nn.ReLU())
+            self.conv2 = ConvBN(out_ch,kernel_size=3, stride=stride, padding=1, deploy=False, activation=nn.ReLU())
         # 1x1 c-4c
         self.conv3 = nn.Sequential()
         self.conv3.add_module('conv1_1', nn.Conv2d(out_ch, self.expansion*out_ch, kernel_size=1))
         self.conv3.add_module('bn', nn.BatchNorm2d(self.expansion*out_ch))
 
     def forward(self, x):
+        # print('模块输入结果', x.shape)
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
         out += self.shortcut(x)
         out = F.relu(out)
+        # print('模块输出结果',out.shape)
+        # print('\n')
         return out
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=1000, width_multiplier=1, is_acs=False):
+    def __init__(self, block, num_blocks, num_classes=1000, width_multiplier=1., is_acs=False):
         super(ResNet, self).__init__()
 
         self.in_ch = int(64 * width_multiplier)
@@ -112,22 +112,13 @@ class ResNet(nn.Module):
         out = self.linear(out)
         return out
 
-# 普通resnet
-def create_Res18():
-    return ResNet(BasicBlock, [2,2,2,2], num_classes=1000, width_multiplier=1, is_acs=False)
-
-def create_Res50():
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=1, is_acs=False)
-
-def create_Res101():
-    return ResNet(Bottleneck, [3,4,23,3], num_classes=1000, width_multiplier=1, is_acs=False)
-
 # acs_resnet
-def create_Acs_Res18():
-    return ResNet(BasicBlock, [2,2,2,2], num_classes=1000, width_multiplier=1, is_acs=True)
 
-def create_Acs_Res50():
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=1, is_acs=True)
+def create_Acs_Res50_s(is_acs=False):
+    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=0.5, is_acs=is_acs)
 
-def create_Acs_Res101():
-    return ResNet(Bottleneck, [3,4,23,3], num_classes=1000, width_multiplier=1, is_acs=True)
+def create_Acs_Res50(is_acs=False):
+    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)
+
+def create_Acs_Res101(is_acs=False):
+    return ResNet(Bottleneck, [3,4,23,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)
