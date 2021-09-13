@@ -13,15 +13,7 @@ class tests(nn.Module):
         b,c,h,w=x.shape
         for i in range(5):
             m=ACS(in_channels=c,kernel_size=3,deploy=False,activation=nn.ReLU()).to(device)
-            #m=ConvBN(in_channels=64,kernel_size=3,deploy=False,activation=nn.ReLU())
-            # 这段代码的用途？
-            # for module in m.modules():
-            #     if isinstance(module, torch.nn.BatchNorm2d):
-            #         nn.init.uniform_(module.running_mean, 0, 0.1)
-            #         nn.init.uniform_(module.running_var, 0, 0.1)
-            #         nn.init.uniform_(module.weight, 0, 0.1)
-            #         nn.init.uniform_(module.bias, 0, 0.1)
-
+            m.apply(weights_init)
             m.eval()
             train_y = m(x)
             m.switch_to_deploy()
@@ -32,14 +24,15 @@ class tests(nn.Module):
     def test_1(self,x):
         diff1 = []
         device=x.device
-        models_1 = create_Acs_Res50_s(is_acs=True).to(device)
-        models_1.eval()
-        train_y = models_1(x)
-        for module in models_1.modules():
+        m = create_Acs_Res50_s(is_acs=True).to(device)
+        m.apply(weights_init)
+        m.eval()
+        train_y = m(x)
+        for module in m.modules():
             if hasattr(module, 'switch_to_deploy'):
                 module.switch_to_deploy()
-        models_1.to(device)
-        deploy_y = models_1(x)
+        m.to(device)
+        deploy_y = m(x)
         diff1.append(((train_y - deploy_y) ** 2).sum())
         return diff1
 
@@ -52,5 +45,5 @@ class tests(nn.Module):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 x=torch.rand([32,3,224,224],device=device)
-tests=tests(0)(x)
+tests=tests(1)(x)
 print(tests)

@@ -4,6 +4,16 @@ import torch.nn.functional as F
 import numpy as np
 import math
 
+def weights_init(m):
+    if isinstance(m,nn.Linear):
+        nn.init.xavier_normal_(m.weight)
+        nn.init.constant_(m.bias,0.0)
+    elif isinstance(m,nn.Conv2d):
+        nn.init.kaiming_normal_(m.weight,mode='fan_out',nonlinearity='relu')
+    elif isinstance(m,nn.BatchNorm2d):
+        nn.init.uniform_(m.weight,0.02,1.)
+        nn.init.constant_(m.bias,0.0)
+
 #转换一：3x3conv和bn融合
 def I_fusebn(kernel, bn):
     #传入的kernel为卷积权重，bn为BN网络层结构
@@ -73,84 +83,3 @@ def VI_multiscale(kernel, target_kernel_size):
     #      0 0 0
     return F.pad(kernel, [H_pixels_to_pad, H_pixels_to_pad, W_pixels_to_pad, W_pixels_to_pad])
 
-
-class IBC1x1(nn.Conv2d):
-
-    def __init__(self, channels, groups=1):
-        super(IBC1x1, self).__init__(in_channels=channels, out_channels=channels, kernel_size=1,
-                                     stride=1, padding=0, groups=groups, bias=False)
-        # 保证通道能够被正确分组，除不尽就报错
-        assert channels % groups == 0
-        input_dim = channels // groups
-        # 创建一个1x1的卷积核[out_ch,in_ch,1,1]
-        id_value = np.zeros((channels, input_dim, 1, 1))
-
-        # 第i个张量体的第i个通道为1,其余通道为0，实现identity的卷积过程
-        for i in range(channels):
-            id_value[i, i % input_dim, 0, 0] = 1
-
-            # tensor.type_as(tensor),使张量获得同另一个张量的相同数据类型
-        self.id_tensor = torch.from_numpy(id_value).type_as(self.weight)
-        nn.init.zeros_(self.weight)
-
-    def forward(self, input):
-        # 融合后的卷积核
-        kernel = self.weight + self.id_tensor.to(self.weight.device)
-        # F.conv2d就纯粹是个函数，需要手动定义权重和偏差
-        result = F.conv2d(input, kernel, None, stride=1, padding=0, dilation=self.dilation, groups=self.groups)
-        return result  # result=input
-
-    def get_actual_kernel(self):
-        return self.weight + self.id_tensor.to(self.weight.device)
-
-
-class BPL(nn.Module):
-    def __init__(self, pad_pixels, num_features):
-        super(BPL, self).__init__()
-        self.bn = nn.BatchNorm2d(num_features)
-        # 填充像素值=padding
-        self.pad_pixels = pad_pixels
-
-    def forward(self, input):
-        output = self.bn(input)
-        if self.pad_pixels > 0:
-            # BN层的数学计算公式,bias为偏差、weight为权重、running_mean为均值、running_val为标准差
-            if self.bn.affine:
-                # b-mean*W/根号下Var
-                pad_values = self.bn.bias.detach() - self.bn.running_mean * self.bn.weight.detach() / \
-                             torch.sqrt(self.bn.running_var + self.bn.eps)
-            else:
-                pad_values = - self.bn.running_mean / torch.sqrt(self.bn.running_var + self.bn.eps)
-
-            # 在output的四周进行数值填充0，pad_pixels表示填充行数和列数1，4表示上下左右四个方向
-            output = F.pad(output, [self.pad_pixels] * 4)  # 1x2x3x3->1x2x5x5
-            pad_values = pad_values.view(1, -1, 1, 1)  # [x,y,z]->1x3x1x1
-            output[:, :, 0:self.pad_pixels, :] = pad_values  # 对填充的上边那些行广播赋值 1x3x1x5=(1x3x1x1->1x3x1x5)
-            output[:, :, -self.pad_pixels:, :] = pad_values  # 对填充的下边那些行广播赋值
-            output[:, :, :, 0:self.pad_pixels] = pad_values  # 对填充的左边那些行广播赋值 1x3x5x1=(1x3x1x1->1x3x5x1)
-            output[:, :, :, -self.pad_pixels:] = pad_values  # 对填充的右边那些行广播赋值
-
-        return output
-
-    # @property是python中的描述符，最大的好处就是在类中把一个方法变成属性调用
-    # BPL.weight()是一个成员函数，返回self.bn.weight，而BPL.weight仅仅是成员函数的名称，不会有返回值
-    # 使用了property后，就相当于 BPL.weight = BPL.weight() = self.bn.weight
-    @property
-    def weight(self):
-        return self.bn.weight
-
-    @property
-    def bias(self):
-        return self.bn.bias
-
-    @property
-    def running_mean(self):
-        return self.bn.running_mean
-
-    @property
-    def running_var(self):
-        return self.bn.running_var
-
-    @property
-    def eps(self):
-        return self.bn.eps
