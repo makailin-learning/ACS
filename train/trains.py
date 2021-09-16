@@ -30,7 +30,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.utils import AverageMeter, accuracy, ProgressMeter, val_preprocess, strong_train_preprocess, standard_train_preprocess
 from model.models import *
 
-IMAGENET_TRAINSET_SIZE = 1281167
+IMAGENET_TRAINSET_SIZE = 1281167   # imagenet-1K数据集的图片训练张数
+CIFAR_TRAINSET_SIZE = 50048
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
@@ -39,14 +40,14 @@ parser.add_argument('-a', '--arch', default='ResNet-50') # 使用 metavar 来指
 parser.add_argument('-t', '--blocktype', default='ACS', choices=['ACS', 'base'])
 parser.add_argument('--epochs', default=120, type=int,help='训练世代')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=64, type=int,help='训练批次数')
+parser.add_argument('-b', '--batch-size', default=128, type=int,help='训练批次数')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, help='初始学习率', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, help='优化动量')
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float, help='优化衰减率',dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=10, type=int, help='打印频次')
 parser.add_argument('--resume', default='', type=str, help='断点训练文件的路径')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',help='evaluate model on validation set')
-parser.add_argument('--is_acs', action='store_true', default=False, help='是否采用acs模块')
+parser.add_argument('--is_acs', action='store_true', default=True, help='是否采用acs模块')
 parser.add_argument('--seed', default=7, type=int,help='为训练初始化随机种子')
 parser.add_argument('--image_size', default=224, type=int,help='训练图像尺寸')
 #parser.add_argument('--gpu', default=None, type=int,help='cuda设备使用id号')
@@ -87,7 +88,7 @@ def main():
                       'which can slow down your training considerably! '
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
-    net=Acs_Res50_s(is_acs=args.is_acs).to(device)
+    net=Acs_Res18_s(is_acs=args.is_acs).to(device)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -95,7 +96,7 @@ def main():
     optimizer = sgd_optimizer(net, args.lr, args.momentum, args.weight_decay)
 
     # T——max为一次学习率周期的迭代次数，即 T_max 个 epoch 之后重新设置学习率
-    lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs * IMAGENET_TRAINSET_SIZE // args.batch_size)
+    lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs * CIFAR_TRAINSET_SIZE // args.batch_size)
 
     # 断点训练
     if args.resume:
@@ -188,7 +189,7 @@ def main():
             'best_acc1': best_acc1,
             'optimizer': optimizer.state_dict(),
             'scheduler': lr_scheduler.state_dict(),
-        }, is_best, filename='{}_{}_{}.pth.tar'.format(epoch+1, args.arch, args.blocktype))
+        }, is_best, filename='{}_{}.pth.tar'.format( args.arch, args.blocktype))
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler):
@@ -197,7 +198,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler):
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(len(train_loader),[batch_time, data_time, losses, top1, top5, ],prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
+    #lr = AverageMeter('now_lr',':6.6f')
+    progress = ProgressMeter(len(train_loader),[batch_time, data_time, losses, top1, top5, lr_scheduler.get_lr()[0]],prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
 
     # switch to train mode
     model.train()
@@ -233,8 +235,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler):
 
         if i % args.print_freq == 0:
             progress.display(i)
-        if i % 1000 == 0:
-            print('cur lr: ', lr_scheduler.get_lr()[0])
+        #if i % 1000 == 0:
+            #print('cur lr: ', lr_scheduler.get_lr()[0])
 
 def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter('Time', ':6.3f')

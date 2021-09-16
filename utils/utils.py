@@ -22,7 +22,7 @@ def strong_train_preprocess(img_size):
     print('---------------------- strong dataaug!')
     return trans
 
-def standard_train_preprocess(img_size):
+def standard_train_preprocess(img_size=224):
     trans = transforms.Compose([
         #transforms.RandomResizedCrop(img_size),
         transforms.RandomHorizontalFlip(),
@@ -32,10 +32,19 @@ def standard_train_preprocess(img_size):
     print('---------------------- weak dataaug!')
     return trans
 
-def val_preprocess(img_size):
+def val_preprocess(img_size=224):
     trans = transforms.Compose([
         #transforms.Resize(img_size),
         transforms.CenterCrop(),
+        transforms.ToTensor(),
+        normalize,
+    ])
+    return trans
+
+def test_preprocess(img_size=224):
+    trans = transforms.Compose([
+        #transforms.Resize(img_size),
+        #transforms.CenterCrop(),
         transforms.ToTensor(),
         normalize,
     ])
@@ -73,7 +82,7 @@ class ProgressMeter(object):
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print(end='\t'.join(entries)+'\r')
+        print('\t'.join(entries))
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
