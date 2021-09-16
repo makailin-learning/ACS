@@ -114,11 +114,11 @@ class ResNet(nn.Module):
 
 # acs_resnet
 
-def create_Acs_Res50_s(is_acs=False):
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=0.5, is_acs=is_acs)
+def Acs_Res50_s(is_acs=False):
+    return ResNet(Bottleneck, [3,4,6,3], num_classes=100, width_multiplier=0.5, is_acs=is_acs)
 
-def create_Acs_Res50(is_acs=False):
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)
+def Acs_Res50_l(is_acs=False):
+    return ResNet(Bottleneck, [3,4,6,3], num_classes=100, width_multiplier=1, is_acs=is_acs)
 
-def create_Acs_Res101(is_acs=False):
-    return ResNet(Bottleneck, [3,4,23,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)
+def Acs_Res101(is_acs=False):
+    return ResNet(Bottleneck, [3,4,23,3], num_classes=100, width_multiplier=1, is_acs=is_acs)

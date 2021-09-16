@@ -24,7 +24,7 @@ class tests(nn.Module):
     def test_1(self,x):
         diff1 = []
         device=x.device
-        m = create_Acs_Res50_s(is_acs=True).to(device)
+        m = Acs_Res50_s(is_acs=True).to(device)
         m.apply(weights_init)
         m.eval()
         train_y = m(x)
@@ -45,5 +45,5 @@ class tests(nn.Module):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 x=torch.rand([32,3,224,224],device=device)
-tests=tests(1)(x)
+tests=tests(0)(x)
 print(tests)
