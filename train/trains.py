@@ -182,6 +182,9 @@ def main():
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
+        if is_best:
+            torch.save(net,'E:/acs_model_store/best_model.pth')
+
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,

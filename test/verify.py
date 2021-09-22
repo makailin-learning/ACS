@@ -7,11 +7,11 @@ class tests(nn.Module):
         super(tests, self).__init__()
         self.test_id=test_id
 
-    def test_0(self,x):
+    def test_0(self,device):
         diff=[]
-        device=x.device
-        b,c,h,w=x.shape
         for i in range(5):
+            x=torch.rand([16,32,224,224],device=device)
+            b, c, h, w = x.shape
             m=ACS(in_channels=c,kernel_size=3,deploy=False,activation=nn.ReLU()).to(device)
             m.apply(weights_init)
             m.eval()
@@ -21,17 +21,21 @@ class tests(nn.Module):
             diff.append(((train_y - deploy_y) ** 2).sum())
         return diff
 
-    def test_1(self,x):
+    def test_1(self,device):
         diff1 = []
-        device=x.device
-        m = Acs_Res50_s(is_acs=True).to(device)
-        m.apply(weights_init)
+        x = torch.rand([6, 3, 224, 224], device=device)
+        #m = Acs_Res18_s(is_acs=True).to(device)
+        #m.apply(weights_init)
+        m = torch.load('E:/acs_model_store/best_model.pth')
+        #m.load_state_dict(checkpoint['state_dict'])
+
         m.eval()
         train_y = m(x)
+        print('\n')
         for module in m.modules():
             if hasattr(module, 'switch_to_deploy'):
                 module.switch_to_deploy()
-        m.to(device)
+
         deploy_y = m(x)
         diff1.append(((train_y - deploy_y) ** 2).sum())
         return diff1
@@ -44,6 +48,6 @@ class tests(nn.Module):
         return out
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-x=torch.rand([32,3,224,224],device=device)
-tests=tests(0)(x)
+x=torch.rand([8,3,224,224],device=device)
+tests=tests(1)(device)
 print(tests)

@@ -20,6 +20,7 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
+        print('l',out[0,0,0,0])
         out = self.conv2(out)
         out = out + self.shortcut(x)
         out = F.relu(out)
@@ -56,14 +57,15 @@ class Bottleneck(nn.Module):
     def forward(self, x):
         # print('模块输入结果', x.shape)
         out = self.conv1(x)
+        print('l', out[4, 8, 42, 42])
         out = self.conv2(out)
+
         out = self.conv3(out)
         out += self.shortcut(x)
         out = F.relu(out)
         # print('模块输出结果',out.shape)
         # print('\n')
         return out
-
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=1000, width_multiplier=1., is_acs=False):
@@ -80,9 +82,9 @@ class ResNet(nn.Module):
         self.stage0.add_module('maxpool', nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
         self.stage1 = self._make_stage(block, int(64 * width_multiplier), num_blocks[0], stride=1)
-        self.stage2 = self._make_stage(block, int(128 * width_multiplier), num_blocks[1], stride=2)
-        self.stage3 = self._make_stage(block, int(256 * width_multiplier), num_blocks[2], stride=2)
-        self.stage4 = self._make_stage(block, int(512 * width_multiplier), num_blocks[3], stride=2)
+        self.stage2 = self._make_stage(block, int(128 * width_multiplier), num_blocks[1], stride=1)
+        self.stage3 = self._make_stage(block, int(256 * width_multiplier), num_blocks[2], stride=1)
+        self.stage4 = self._make_stage(block, int(512 * width_multiplier), num_blocks[3], stride=1)
 
         # 目标检测时不要这两行
         self.gap = nn.AdaptiveAvgPool2d(output_size=1)
