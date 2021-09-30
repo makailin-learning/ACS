@@ -20,7 +20,7 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        print('l',out[0,0,0,0])
+        print('lk',out[0,0,0,0])
         out = self.conv2(out)
         out = out + self.shortcut(x)
         out = F.relu(out)
@@ -57,9 +57,7 @@ class Bottleneck(nn.Module):
     def forward(self, x):
         # print('模块输入结果', x.shape)
         out = self.conv1(x)
-        print('l', out[4, 8, 42, 42])
         out = self.conv2(out)
-
         out = self.conv3(out)
         out += self.shortcut(x)
         out = F.relu(out)

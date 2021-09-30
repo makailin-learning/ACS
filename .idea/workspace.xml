@@ -5,9 +5,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/model/common.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/common.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/model/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/infer.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/infer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/verify.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/verify.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train/trains.py" beforeDir="false" afterPath="$PROJECT_DIR$/train/trains.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,7 +30,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../repvgg/repmlp" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunManager" selected="Python.verify">

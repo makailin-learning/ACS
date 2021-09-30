@@ -88,7 +88,7 @@ class ACS(nn.Module):
         而module中非nn.Parameter()的普通tensor是不在parameter中的。
         """
 
-        self.c_score = nn.Parameter(torch.ones(2*in_channels, device=device), requires_grad=True)
+        self.c_score = nn.Parameter(torch.rand(in_channels, device=device), requires_grad=True)
         self.cat_w = nn.Parameter(torch.ones(4, device=device),requires_grad=True)
         self.cat_relu=nn.ReLU()
         #self.c_mask = torch.sort(torch.randperm(in_channels, device=device)).values
@@ -105,7 +105,6 @@ class ACS(nn.Module):
         # 注意这里这个坑,h/w是会进行下采样的,采用原来的h/w,在进行batch resize时，会抵充通道数
         shape = self.shortcut(x).shape
         b, c, h, w = shape
-        self.c=torch.linspace(0,2*c,2*c,device=device)
 
         # 获得拼接乘数
         weight = torch.softmax(self.cat_w, dim=0)
@@ -116,15 +115,15 @@ class ACS(nn.Module):
         else:
 
             # 输入乘以拼接乘数
-            # acs_main = self.acs_main(x * weight[0])
-            # acs_1x1 = self.acs_1x1(x * weight[1])
-            # acs_3x3 = self.acs_3x3(x * weight[2])
-            # acs_avg = self.acs_avg(x * weight[3])
+            acs_main = self.acs_main(x * weight[0])
+            acs_1x1 = self.acs_1x1(x * weight[1])
+            acs_3x3 = self.acs_3x3(x * weight[2])
+            acs_avg = self.acs_avg(x * weight[3])
 
-            acs_main = self.acs_main(x)
-            acs_1x1 = self.acs_1x1(x)
-            acs_3x3 = self.acs_3x3(x)
-            acs_avg = self.acs_avg(x)
+            # acs_main = self.acs_main(x)
+            # acs_1x1 = self.acs_1x1(x)
+            # acs_3x3 = self.acs_3x3(x)
+            # acs_avg = self.acs_avg(x)
 
             out = torch.cat((acs_main, acs_1x1, acs_3x3, acs_avg), dim=1)
 
@@ -142,18 +141,26 @@ class ACS(nn.Module):
         # out = out[c_mask, :, :]
         # out = out.reshape(b, -1, h, w)
 
-        c_score = torch.sigmoid(self.c)
-        c_index = torch.topk(c_score, k=c, dim=0, largest=True, sorted=True).indices
-        c_index = c_index.sort(dim=0).values
-        out = out[:,c_index, :, :]
+        ind=(torch.sigmoid(self.c_score.detach_())*c).long()     # 根据分数选取通道编号
+        conv_k=torch.zeros([c,out.shape[1],1,1],device=device)   # c个2*cx1x1的卷积核
+        for i in range(c):
+            conv_k[i,ind[i],0,0]=self.c_score[i]      # 第i个卷积核的第index[i]的通道赋值为分数值，其余通道保持为0
+        out=F.conv2d(out,conv_k)
+
+        # c_score = torch.sigmoid(self.c)
+        # c_index = torch.topk(c_score, k=c, dim=0, largest=True, sorted=True).indices
+        # c_index = c_index.sort(dim=0).values
+        # out = out[:,c_index, :, :]
 
         out = self.activation(self.bn(out))
         out = out + self.shortcut(x)
 
         with open('E:/ACS/weight.txt','w') as f:
             print(weight,file=f)
-        # with open('E:/ACS/cat_w.txt','a') as fa:
-        #      print(c_index,file=fa,end='\n')
+        with open('E:/ACS/ind.txt','w') as fa:
+             print(ind,file=fa,end='\n')
+        with open('E:/ACS/c.txt','w') as fa:
+             print(self.c_score,file=fa,end='\n')
         return out
 
     # TODO 融合有问题，再阅读DBB代码
@@ -163,34 +170,34 @@ class ACS(nn.Module):
         #weight = self.cat_w.clone()
         weight = torch.softmax(self.cat_w, dim=0)
         # main分支  直接乘以融合参数(仅仅权重，偏差不需要)，转换ok
-        #k_main = self.acs_main.weight.data*weight[0]
-        k_main = self.acs_main.weight.data
+        k_main = self.acs_main.weight.data*weight[0]
+        #k_main = self.acs_main.weight.data
         b_main = self.acs_main.bias.data
 
         # 1x1分支   先乘以融合参数(仅仅权重，偏差不需要)，再扩展为3x3格式，转换ok
         # 融合函数返回的是普通张量nn.tensor
-        #k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)*weight[1]
-        k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)
+        k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)*weight[1]
+        #k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)
         b_1x1 = self.acs_1x1.bias.data    # 所以不能进行 nn.tensor = nn.parameters.tensor 赋值
 
         # 1x1-3x3分支
         k_1x1_3x3_first, b_1x1_3x3_first = I_fusebn(self.acs_3x3.conv1.weight, self.acs_3x3.bn)
         k_1x1_3x3_second, b_1x1_3x3_second = self.acs_3x3.conv3.weight.data , self.acs_3x3.conv3.bias.data
 
-        # k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first*weight[2], b_1x1_3x3_first,
-        #                                                  k_1x1_3x3_second,b_1x1_3x3_second)
-        k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first, b_1x1_3x3_first,
-                                                         k_1x1_3x3_second, b_1x1_3x3_second)
+        k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first*weight[2], b_1x1_3x3_first,
+                                                         k_1x1_3x3_second,b_1x1_3x3_second)
+        # k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first, b_1x1_3x3_first,
+        #                                                  k_1x1_3x3_second, b_1x1_3x3_second)
 
         # 1x1-avg分支
         k_1x1_avg_first, b_1x1_avg_first = I_fusebn(self.acs_avg.conv1.weight, self.acs_avg.bn)
         k_avg = V_avg(self.mid_channels, self.kernel_size).to(k_main.device)
         k_1x1_avg_second, b_1x1_avg_second = k_avg,torch.zeros(k_avg.shape[0],device=k_avg.device)
 
-        # k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first*weight[3], b_1x1_avg_first,
-        #                                                  k_1x1_avg_second, b_1x1_avg_second)
-        k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first, b_1x1_avg_first,
+        k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first*weight[3], b_1x1_avg_first,
                                                          k_1x1_avg_second, b_1x1_avg_second)
+        # k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first, b_1x1_avg_first,
+        #                                                  k_1x1_avg_second, b_1x1_avg_second)
 
 
         return IV_concat((k_main, k_1x1, k_1x1_3x3_merged, k_1x1_avg_merged),
