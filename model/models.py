@@ -20,7 +20,6 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        print('lk',out[0,0,0,0])
         out = self.conv2(out)
         out = out + self.shortcut(x)
         out = F.relu(out)

@@ -23,10 +23,10 @@ class tests(nn.Module):
 
     def test_1(self,device):
         diff1 = []
-        x = torch.rand([6, 3, 224, 224], device=device)
+        x = torch.rand([8, 3, 224, 224], device=device)
         #m = Acs_Res18_s(is_acs=True).to(device)
         #m.apply(weights_init)
-        m = torch.load('E:/acs_model_store/best_model.pth')
+        m = torch.load('E:/acs_model_store/best_model_211012.pth')
         #m.load_state_dict(checkpoint['state_dict'])
 
         m.eval()

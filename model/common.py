@@ -79,16 +79,15 @@ class ACS(nn.Module):
 
         # 后处理
         device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.acs_channel = nn.AdaptiveMaxPool2d(output_size=1)
-        self.bn=nn.BatchNorm2d(in_channels)
-        self.index=[]
+        self.acs_channel = nn.AdaptiveAvgPool2d(output_size=1)
+        self.bn = nn.BatchNorm2d(in_channels)
         """
         torch.nn.Parameter是继承自torch.Tensor的子类，其主要作用是作为nn.Module中的可训练参数使用。
         它与torch.Tensor的区别就是nn.Parameter会自动被认为是module的可训练参数，即加入到parameter()这个迭代器中去；
         而module中非nn.Parameter()的普通tensor是不在parameter中的。
         """
 
-        self.c_score = nn.Parameter(torch.rand(in_channels, device=device), requires_grad=True)
+        self.c_score = nn.Parameter(torch.ones([1,2*in_channels,1,1], device=device), requires_grad=True)
         self.cat_w = nn.Parameter(torch.ones(4, device=device),requires_grad=True)
         self.cat_relu=nn.ReLU()
         #self.c_mask = torch.sort(torch.randperm(in_channels, device=device)).values
@@ -107,7 +106,7 @@ class ACS(nn.Module):
         b, c, h, w = shape
 
         # 获得拼接乘数
-        weight = torch.softmax(self.cat_w, dim=0)
+        # weight = torch.softmax(self.cat_w, dim=0)
         # weight = self.cat_w.clone()
 
         if hasattr(self, 'acs_reparam'):
@@ -115,10 +114,10 @@ class ACS(nn.Module):
         else:
 
             # 输入乘以拼接乘数
-            acs_main = self.acs_main(x * weight[0])
-            acs_1x1 = self.acs_1x1(x * weight[1])
-            acs_3x3 = self.acs_3x3(x * weight[2])
-            acs_avg = self.acs_avg(x * weight[3])
+            acs_main = self.acs_main(x * self.cat_w[0])
+            acs_1x1 = self.acs_1x1(x * self.cat_w[1])
+            acs_3x3 = self.acs_3x3(x * self.cat_w[2])
+            acs_avg = self.acs_avg(x * self.cat_w[3])
 
             # acs_main = self.acs_main(x)
             # acs_1x1 = self.acs_1x1(x)
@@ -141,22 +140,29 @@ class ACS(nn.Module):
         # out = out[c_mask, :, :]
         # out = out.reshape(b, -1, h, w)
 
-        ind=(torch.sigmoid(self.c_score.detach_())*c).long()     # 根据分数选取通道编号
-        conv_k=torch.zeros([c,out.shape[1],1,1],device=device)   # c个2*cx1x1的卷积核
-        for i in range(c):
-            conv_k[i,ind[i],0,0]=self.c_score[i]      # 第i个卷积核的第index[i]的通道赋值为分数值，其余通道保持为0
-        out=F.conv2d(out,conv_k)
+        # ind=(torch.sigmoid(self.c_score.detach_())*out.shape[1]).long()     # 根据分数选取通道编号
+        # ind = (torch.sigmoid(self.c_score) * out.shape[1]).long()  # 根据分数选取通道编号
+        # conv_k=torch.zeros([c,out.shape[1],1,1],device=device)              # c个2*cx1x1的卷积核
+        #
+        # for i in range(c):
+        #     conv_k[i,ind[i],0,0]=1.0+self.c_score[i]     # 第i个卷积核的第index[i]的通道赋值为分数值，其余通道保持为0
+        # out=F.conv2d(out,conv_k)
 
         # c_score = torch.sigmoid(self.c)
         # c_index = torch.topk(c_score, k=c, dim=0, largest=True, sorted=True).indices
         # c_index = c_index.sort(dim=0).values
         # out = out[:,c_index, :, :]
-
+        out = out*self.c_score
+        conv_1x1=torch.zeros([c,out.shape[1],1,1],device=device)
+        ind=torch.topk(self.c_score, k=c, dim=1, largest=True, sorted=False).indices
+        for i in range(c):
+            conv_1x1[i,ind[0,i,0,0],0,0]=1.0     # 第i个卷积核的第index[i]的通道赋值为分数值，其余通道保持为0
+        out=F.conv2d(out,conv_1x1)
         out = self.activation(self.bn(out))
-        out = out + self.shortcut(x)
+        # out = out + self.shortcut(x)
 
         with open('E:/ACS/weight.txt','w') as f:
-            print(weight,file=f)
+            print(self.cat_w,file=f)
         with open('E:/ACS/ind.txt','w') as fa:
              print(ind,file=fa,end='\n')
         with open('E:/ACS/c.txt','w') as fa:
@@ -167,16 +173,16 @@ class ACS(nn.Module):
     # 注意该函数融合的是所有权重的数据torch.tensor 而不是可训练数据张量 torch.paramtemers.tensor
     def get_eq_kernel_bias(self):
 
-        #weight = self.cat_w.clone()
-        weight = torch.softmax(self.cat_w, dim=0)
+        # weight = self.cat_w.clone()
+        # weight = torch.softmax(self.cat_w, dim=0)
         # main分支  直接乘以融合参数(仅仅权重，偏差不需要)，转换ok
-        k_main = self.acs_main.weight.data*weight[0]
+        k_main = self.acs_main.weight.data*self.cat_w[0]
         #k_main = self.acs_main.weight.data
         b_main = self.acs_main.bias.data
 
         # 1x1分支   先乘以融合参数(仅仅权重，偏差不需要)，再扩展为3x3格式，转换ok
         # 融合函数返回的是普通张量nn.tensor
-        k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)*weight[1]
+        k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)*self.cat_w[1]
         #k_1x1 = VI_multiscale(self.acs_1x1.weight, self.kernel_size)
         b_1x1 = self.acs_1x1.bias.data    # 所以不能进行 nn.tensor = nn.parameters.tensor 赋值
 
@@ -184,7 +190,7 @@ class ACS(nn.Module):
         k_1x1_3x3_first, b_1x1_3x3_first = I_fusebn(self.acs_3x3.conv1.weight, self.acs_3x3.bn)
         k_1x1_3x3_second, b_1x1_3x3_second = self.acs_3x3.conv3.weight.data , self.acs_3x3.conv3.bias.data
 
-        k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first*weight[2], b_1x1_3x3_first,
+        k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first*self.cat_w[2], b_1x1_3x3_first,
                                                          k_1x1_3x3_second,b_1x1_3x3_second)
         # k_1x1_3x3_merged, b_1x1_3x3_merged = III_1x1_3x3(k_1x1_3x3_first, b_1x1_3x3_first,
         #                                                  k_1x1_3x3_second, b_1x1_3x3_second)
@@ -194,7 +200,7 @@ class ACS(nn.Module):
         k_avg = V_avg(self.mid_channels, self.kernel_size).to(k_main.device)
         k_1x1_avg_second, b_1x1_avg_second = k_avg,torch.zeros(k_avg.shape[0],device=k_avg.device)
 
-        k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first*weight[3], b_1x1_avg_first,
+        k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first*self.cat_w[3], b_1x1_avg_first,
                                                          k_1x1_avg_second, b_1x1_avg_second)
         # k_1x1_avg_merged, b_1x1_avg_merged = III_1x1_3x3(k_1x1_avg_first, b_1x1_avg_first,
         #                                                  k_1x1_avg_second, b_1x1_avg_second)

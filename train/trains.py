@@ -183,7 +183,7 @@ def main():
         best_acc1 = max(acc1, best_acc1)
 
         if is_best:
-            torch.save(net,'E:/acs_model_store/best_model.pth')
+            torch.save(net,'E:/acs_model_store/best_model_211012.pth')
 
         save_checkpoint({
             'epoch': epoch + 1,
