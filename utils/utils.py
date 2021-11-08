@@ -1,5 +1,8 @@
 import torch
 import torchvision.transforms as transforms
+import os
+import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -104,4 +107,27 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
+
+device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# 生产tenorboard日志
+class Logger(object):
+    def __init__(self, log_dir, log_hist=True):
+        if log_hist:
+            log_dir = os.path.join(
+                log_dir,
+                datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
+        self.writer = SummaryWriter(log_dir, comment="ACS")
+
+    def scalar_summary(self, tag, value, step):
+        self.writer.add_scalar(tag, value, step)
+
+    def list_of_scalars_summary(self, tag_value_pairs, step):
+        for tag, value in tag_value_pairs:
+            self.writer.add_scalar(tag, value, step)
+
+    def create_model(self, model, image_size):
+        inputs = torch.randn((1, 3, image_size, image_size),device=device)
+        self.writer.add_graph(model, input_to_model=inputs, verbose=False)
+        preds = model(inputs)
 

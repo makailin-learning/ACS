@@ -30,7 +30,6 @@ class Bottleneck(nn.Module):
     expansion = 4
     def __init__(self, in_ch, out_ch, stride=1, is_acs=False):
         super(Bottleneck, self).__init__()
-
         # stride不为1即img_size下采样,每个block结束时输出升维4倍
         if stride != 1 or in_ch != self.expansion*out_ch:
             self.shortcut =nn.Sequential()
@@ -112,6 +111,7 @@ class ResNet(nn.Module):
         return out
 
 # acs_resnet
+
 
 def Acs_Res18_s(is_acs=False):
     return ResNet(Bottleneck, [2,3,4,3], num_classes=100, width_multiplier=0.5, is_acs=is_acs)

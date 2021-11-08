@@ -28,7 +28,8 @@ import torchvision.datasets as datasets
 # 根据epoch训练次数来调整学习率（learning rate）的方法
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.utils import AverageMeter, accuracy, ProgressMeter, val_preprocess, strong_train_preprocess, standard_train_preprocess
-from model.models import *
+from model.models_new import *
+from utils.utils import Logger
 
 IMAGENET_TRAINSET_SIZE = 1281167   # imagenet-1K数据集的图片训练张数
 CIFAR_TRAINSET_SIZE = 50048
@@ -50,6 +51,7 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',hel
 parser.add_argument('--is_acs', action='store_true', default=True, help='是否采用acs模块')
 parser.add_argument('--seed', default=7, type=int,help='为训练初始化随机种子')
 parser.add_argument('--image_size', default=224, type=int,help='训练图像尺寸')
+parser.add_argument('--log', type = str, default = 'E:/ACS/logs_test/', help = '配置日志地址')
 #parser.add_argument('--gpu', default=None, type=int,help='cuda设备使用id号')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -88,7 +90,12 @@ def main():
                       'which can slow down your training considerably! '
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
-    net=Acs_Res18_s(is_acs=args.is_acs).to(device)
+
+    net = Acs_Res18_s(is_acs=args.is_acs).to(device)
+    mod = Acs_Res18_s(is_acs=args.is_acs)
+    log_dir = args.log
+    log = Logger(log_dir)
+    log.create_model(net, args.image_size)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -183,7 +190,7 @@ def main():
         best_acc1 = max(acc1, best_acc1)
 
         if is_best:
-            torch.save(net,'E:/acs_model_store/best_model_211012.pth')
+            torch.save(net,'E:/acs_model_store/best_model_211016.pth')
 
         save_checkpoint({
             'epoch': epoch + 1,

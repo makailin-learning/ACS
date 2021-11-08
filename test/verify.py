@@ -1,6 +1,6 @@
 import torch
 
-from model.models import *
+from model.models_new import *
 
 class tests(nn.Module):
     def __init__(self,test_id):
@@ -10,10 +10,10 @@ class tests(nn.Module):
     def test_0(self,device):
         diff=[]
         for i in range(5):
-            x=torch.rand([16,32,224,224],device=device)
+            x=torch.rand([8,32,224,224],device=device)
             b, c, h, w = x.shape
             m=ACS(in_channels=c,kernel_size=3,deploy=False,activation=nn.ReLU()).to(device)
-            m.apply(weights_init)
+            # m.apply(weights_init)
             m.eval()
             train_y = m(x)
             m.switch_to_deploy()
@@ -23,10 +23,10 @@ class tests(nn.Module):
 
     def test_1(self,device):
         diff1 = []
-        x = torch.rand([8, 3, 224, 224], device=device)
-        #m = Acs_Res18_s(is_acs=True).to(device)
+        x = torch.rand([8, 3, 32, 32], device=device)
+        m = Acs_Res18_s(is_acs=True).to(device)
         #m.apply(weights_init)
-        m = torch.load('E:/acs_model_store/best_model_211012.pth')
+        m = torch.load('E:/acs_model_store/best_model_211016.pth')
         #m.load_state_dict(checkpoint['state_dict'])
 
         m.eval()
@@ -37,6 +37,7 @@ class tests(nn.Module):
                 module.switch_to_deploy()
 
         deploy_y = m(x)
+        print(deploy_y.shape)
         diff1.append(((train_y - deploy_y) ** 2).sum())
         return diff1
 
