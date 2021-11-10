@@ -1,1 +1,1 @@
-tensor([0.5117, 0.4883], device='cuda:0')
+tensor([0.5018, 0.4982], device='cuda:0', grad_fn=<SoftmaxBackward>)

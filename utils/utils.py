@@ -11,14 +11,14 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 def strong_train_preprocess(img_size):
     trans = transforms.Compose([
         # 随机大小、长宽比裁剪图片,随机裁剪面积比例，默认(0.08，1)
-        #transforms.RandomResizedCrop(img_size),
+        # transforms.RandomResizedCrop(img_size),
         # 依据概率p对PIL图片进行水平翻转，p默认0.5
         transforms.RandomHorizontalFlip(),
         # 调整亮度、对比度、饱和度和色调 brightness,contrast,saturation,hue
         transforms.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4),
         # 转为tensor，并归一化至[0-1]
         transforms.ToTensor(),
-        #PCALighting(0.1, imagenet_pca['eigval'], imagenet_pca['eigvec']),
+        # PCALighting(0.1, imagenet_pca['eigval'], imagenet_pca['eigvec']),
         # 对数据按通道进行标准化，即先减均值，再除以标准差
         normalize,
     ])
@@ -27,7 +27,8 @@ def strong_train_preprocess(img_size):
 
 def standard_train_preprocess(img_size=224):
     trans = transforms.Compose([
-        #transforms.RandomResizedCrop(img_size),
+        # transforms.RandomResizedCrop(img_size),
+        transforms.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize,
@@ -37,8 +38,8 @@ def standard_train_preprocess(img_size=224):
 
 def val_preprocess(img_size=224):
     trans = transforms.Compose([
-        #transforms.Resize(img_size),
-        transforms.CenterCrop(),
+        # transforms.Resize(img_size),
+        # transforms.CenterCrop(),
         transforms.ToTensor(),
         normalize,
     ])
@@ -46,8 +47,8 @@ def val_preprocess(img_size=224):
 
 def test_preprocess(img_size=224):
     trans = transforms.Compose([
-        #transforms.Resize(img_size),
-        #transforms.CenterCrop(),
+        # transforms.Resize(img_size),
+        # transforms.CenterCrop(),
         transforms.ToTensor(),
         normalize,
     ])

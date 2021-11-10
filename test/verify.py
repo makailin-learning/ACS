@@ -1,6 +1,6 @@
 import torch
 
-from model.models_new import *
+from model.models_new2 import *
 
 class tests(nn.Module):
     def __init__(self,test_id):
@@ -50,5 +50,5 @@ class tests(nn.Module):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 x=torch.rand([8,3,224,224],device=device)
-tests=tests(1)(device)
+tests=tests(0)(device)
 print(tests)

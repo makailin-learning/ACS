@@ -114,7 +114,7 @@ class ResNet(nn.Module):
 
 
 def Acs_Res18_s(is_acs=False):
-    return ResNet(Bottleneck, [2,3,4,3], num_classes=100, width_multiplier=0.5, is_acs=is_acs)
+    return ResNet(Bottleneck, [2,3,4,3], num_classes=10, width_multiplier=0.5, is_acs=is_acs)
 
 def Acs_Res18_l(is_acs=False):
     return ResNet(Bottleneck, [2,3,4,3], num_classes=100, width_multiplier=1, is_acs=is_acs)

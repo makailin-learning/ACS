@@ -28,29 +28,31 @@ import torchvision.datasets as datasets
 # 根据epoch训练次数来调整学习率（learning rate）的方法
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.utils import AverageMeter, accuracy, ProgressMeter, val_preprocess, strong_train_preprocess, standard_train_preprocess
-from model.models_new import *
+from model.models_cifar import *
 from utils.utils import Logger
 
 IMAGENET_TRAINSET_SIZE = 1281167   # imagenet-1K数据集的图片训练张数
-CIFAR_TRAINSET_SIZE = 50048
+CIFAR_TRAINSET_SIZE = 50000
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 parser.add_argument('--data', default='E:/Image_Net/', type=str, help='数据集路径')
-parser.add_argument('-a', '--arch', default='ResNet-50') # 使用 metavar 来指定一个替代名称
+parser.add_argument('-a', '--arch', default='AcsNet') # 使用 metavar 来指定一个替代名称
 parser.add_argument('-t', '--blocktype', default='ACS', choices=['ACS', 'base'])
-parser.add_argument('--epochs', default=120, type=int,help='训练世代')
+parser.add_argument('--epochs', default=300, type=int,help='训练世代')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=128, type=int,help='训练批次数')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, help='初始学习率', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, help='优化动量')
-parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float, help='优化衰减率',dest='weight_decay')
-parser.add_argument('-p', '--print-freq', default=10, type=int, help='打印频次')
+parser.add_argument('--wd', '--weight-decay', default=3*1e-4, type=float, help='优化衰减率',dest='weight_decay')
+parser.add_argument('-p', '--print-freq', default=20, type=int, help='打印频次')
 parser.add_argument('--resume', default='', type=str, help='断点训练文件的路径')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',help='evaluate model on validation set')
 parser.add_argument('--is_acs', action='store_true', default=True, help='是否采用acs模块')
 parser.add_argument('--seed', default=7, type=int,help='为训练初始化随机种子')
-parser.add_argument('--image_size', default=224, type=int,help='训练图像尺寸')
+parser.add_argument('--step_epochs', default=[90,180,240], type=list,help='学习率更改epoch')
+parser.add_argument('--lr_decay', default=0.2, type=float,help='学习率衰减率')
+parser.add_argument('--image_size', default=32, type=int,help='训练图像尺寸')
 parser.add_argument('--log', type = str, default = 'E:/ACS/logs_test/', help = '配置日志地址')
 #parser.add_argument('--gpu', default=None, type=int,help='cuda设备使用id号')
 
@@ -92,7 +94,6 @@ def main():
                       'from checkpoints.')
 
     net = Acs_Res18_s(is_acs=args.is_acs).to(device)
-    mod = Acs_Res18_s(is_acs=args.is_acs)
     log_dir = args.log
     log = Logger(log_dir)
     log.create_model(net, args.image_size)
@@ -102,8 +103,9 @@ def main():
 
     optimizer = sgd_optimizer(net, args.lr, args.momentum, args.weight_decay)
 
+    lr = args.lr
     # T——max为一次学习率周期的迭代次数，即 T_max 个 epoch 之后重新设置学习率
-    lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs * CIFAR_TRAINSET_SIZE // args.batch_size)
+    # lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs * CIFAR_TRAINSET_SIZE // args.batch_size)
 
     # 断点训练
     if args.resume:
@@ -126,7 +128,7 @@ def main():
                 best_acc1 = best_acc1.to(args.gpu)
             net.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['scheduler'])
+            lr.load_state_dict(checkpoint['scheduler'])
             print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
@@ -141,7 +143,8 @@ def main():
 
     # 数据读取及预处理模块
     trans = strong_train_preprocess(args.image_size) if 'ResNet' in args.arch else standard_train_preprocess(args.image_size)
-    #print('aug is ', trans)
+    vals = val_preprocess(args.image_size)
+    # print('aug is ', trans)
 
     """
     # ImageFolder是一个通用的数据加载器
@@ -158,7 +161,7 @@ def main():
     train_dataset = datasets.CIFAR100(root='E:/cifar_100/train', train=True, download=True,transform=trans)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
-    val_dataset = datasets.CIFAR100(root='E:/cifar_100/cal', train=False, download=True,transform=trans)
+    val_dataset = datasets.CIFAR100(root='E:/cifar_100/cal', train=False, download=True,transform=vals)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     """
@@ -176,21 +179,26 @@ def main():
         return
 
     best_acc1 = 0
+
     for epoch in range(args.start_epoch, args.epochs):
 
+        if epoch+1 in args.step_epochs:
+            optimizer.param_groups[0]['lr'] = optimizer.param_groups[0]['lr'] * args.lr_decay
+            lr = optimizer.param_groups[0]['lr']
         # adjust_learning_rate(optimizer, epoch, args)
         # train for one epoch
-        train(train_loader, net, criterion, optimizer, epoch, args, lr_scheduler)
+        # train(train_loader, net, criterion, optimizer, epoch, args, lr_scheduler)
+        train(train_loader, net, criterion, optimizer, epoch, args, lr, log)
         print('\n')
         # evaluate on validation set
-        acc1 = validate(val_loader, net, criterion, args)
+        acc1 = validate(val_loader, net, epoch, criterion, args, log)
 
         # remember best acc@1 and save checkpoint
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
         if is_best:
-            torch.save(net,'E:/acs_model_store/best_model_211016.pth')
+            torch.save(net,'E:/acs_model_store/best_model_211109.pth')
 
         save_checkpoint({
             'epoch': epoch + 1,
@@ -198,18 +206,19 @@ def main():
             'state_dict': net.state_dict(),
             'best_acc1': best_acc1,
             'optimizer': optimizer.state_dict(),
-            'scheduler': lr_scheduler.state_dict(),
+            'scheduler': lr,
         }, is_best, filename='{}_{}.pth.tar'.format( args.arch, args.blocktype))
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler):
+def train(train_loader, model, criterion, optimizer, epoch, args, lr, log):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    #lr = AverageMeter('now_lr',':6.6f')
-    progress = ProgressMeter(len(train_loader),[batch_time, data_time, losses, top1, top5, lr_scheduler.get_lr()[0]],prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
+    # lr = AverageMeter('now_lr',':6.6f')
+
+    progress = ProgressMeter(len(train_loader),[batch_time, data_time, losses, top1, top5, lr], prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
 
     # switch to train mode
     model.train()
@@ -228,6 +237,10 @@ def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler):
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
+
+        train_list = [('train_losses', loss), ('train_top1', acc1), ('train_top5', acc5)]
+        log.list_of_scalars_summary(train_list, epoch*len(train_loader)+i)
+
         losses.update(loss.item(), images.size(0))
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
@@ -241,14 +254,15 @@ def train(train_loader, model, criterion, optimizer, epoch, args, lr_scheduler):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        lr_scheduler.step()
+        # lr_scheduler.step()
 
         if i % args.print_freq == 0:
             progress.display(i)
-        #if i % 1000 == 0:
-            #print('cur lr: ', lr_scheduler.get_lr()[0])
+        # if i % 1000 == 0:
+            # print('cur lr: ', lr_scheduler.get_lr()[0])
 
-def validate(val_loader, model, criterion, args):
+
+def validate(val_loader, model, epoch, criterion, args, log):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -271,6 +285,10 @@ def validate(val_loader, model, criterion, args):
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
+
+            val_list = [('val_loss', loss), ('val_top1', acc1), ('val_top5', acc5)]
+            log.list_of_scalars_summary(val_list, epoch*len(val_loader)+i)
+
             losses.update(loss.item(), images.size(0))
             top1.update(acc1[0], images.size(0))
             top5.update(acc5[0], images.size(0))
