@@ -28,7 +28,7 @@ import torchvision.datasets as datasets
 # 根据epoch训练次数来调整学习率（learning rate）的方法
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.utils import AverageMeter, accuracy, ProgressMeter, val_preprocess, strong_train_preprocess, standard_train_preprocess
-from model.models_cifar import *
+from model.models_cifar2 import *
 from utils.utils import Logger
 
 IMAGENET_TRAINSET_SIZE = 1281167   # imagenet-1K数据集的图片训练张数
@@ -58,21 +58,25 @@ parser.add_argument('--log', type = str, default = 'E:/ACS/logs_test/', help = '
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# def sgd_optimizer(net, lr, momentum, weight_decay):
+#     params = []
+#     for key, value in net.named_parameters():
+#         if not value.requires_grad:
+#             continue
+#         apply_lr = lr
+#         apply_wd = weight_decay
+#         if 'bias' in key:
+#             apply_lr = 2 * lr       #   Just a Caffe-style common practice. Made no difference.
+#         if 'depth' in key:
+#             apply_wd = 0
+#         print('set weight decay ', key, apply_wd)
+#         params += [{'params': [value], 'lr': apply_lr, 'weight_decay': apply_wd}]
+#     optimizer = torch.optim.SGD(params, lr, momentum=momentum)
+#     return optimizer
+
 def sgd_optimizer(net, lr, momentum, weight_decay):
-    params = []
-    for key, value in net.named_parameters():
-        if not value.requires_grad:
-            continue
-        apply_lr = lr
-        apply_wd = weight_decay
-        if 'bias' in key:
-            apply_lr = 2 * lr       #   Just a Caffe-style common practice. Made no difference.
-        if 'depth' in key:
-            apply_wd = 0
-        print('set weight decay ', key, apply_wd)
-        params += [{'params': [value], 'lr': apply_lr, 'weight_decay': apply_wd}]
-    optimizer = torch.optim.SGD(params, lr, momentum=momentum)
-    return optimizer
+    return torch.optim.SGD([v for v in net.parameters() if v.requires_grad],lr,momentum,weight_decay)
+
 
 def main():
     args = parser.parse_args()
@@ -103,7 +107,6 @@ def main():
 
     optimizer = sgd_optimizer(net, args.lr, args.momentum, args.weight_decay)
 
-    lr = args.lr
     # T——max为一次学习率周期的迭代次数，即 T_max 个 epoch 之后重新设置学习率
     # lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs * CIFAR_TRAINSET_SIZE // args.batch_size)
 
@@ -128,7 +131,7 @@ def main():
                 best_acc1 = best_acc1.to(args.gpu)
             net.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            lr.load_state_dict(checkpoint['scheduler'])
+            optimizer.param_groups[0]['lr'].load_state_dict(checkpoint['scheduler'])
             print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
@@ -183,12 +186,12 @@ def main():
     for epoch in range(args.start_epoch, args.epochs):
 
         if epoch+1 in args.step_epochs:
-            optimizer.param_groups[0]['lr'] = optimizer.param_groups[0]['lr'] * args.lr_decay
             lr = optimizer.param_groups[0]['lr']
+            optimizer = sgd_optimizer(net, lr * args.lr_decay, args.momentum, args.weight_decay)
         # adjust_learning_rate(optimizer, epoch, args)
         # train for one epoch
         # train(train_loader, net, criterion, optimizer, epoch, args, lr_scheduler)
-        train(train_loader, net, criterion, optimizer, epoch, args, lr, log)
+        train(train_loader, net, criterion, optimizer, epoch, args, log)
         print('\n')
         # evaluate on validation set
         acc1 = validate(val_loader, net, epoch, criterion, args, log)
@@ -206,11 +209,11 @@ def main():
             'state_dict': net.state_dict(),
             'best_acc1': best_acc1,
             'optimizer': optimizer.state_dict(),
-            'scheduler': lr,
+            'scheduler': optimizer.param_groups[0]['lr'],
         }, is_best, filename='{}_{}.pth.tar'.format( args.arch, args.blocktype))
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args, lr, log):
+def train(train_loader, model, criterion, optimizer, epoch, args, log):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -218,7 +221,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, lr, log):
     top5 = AverageMeter('Acc@5', ':6.2f')
     # lr = AverageMeter('now_lr',':6.6f')
 
-    progress = ProgressMeter(len(train_loader),[batch_time, data_time, losses, top1, top5, lr], prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
+    progress = ProgressMeter(len(train_loader),[batch_time, data_time, losses, top1, top5, optimizer.param_groups[0]['lr']], prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
 
     # switch to train mode
     model.train()

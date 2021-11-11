@@ -28,8 +28,8 @@ def strong_train_preprocess(img_size):
 def standard_train_preprocess(img_size=224):
     trans = transforms.Compose([
         # transforms.RandomResizedCrop(img_size),
-        transforms.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4),
         transforms.RandomHorizontalFlip(),
+        transforms.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4),
         transforms.ToTensor(),
         normalize,
     ])
@@ -130,5 +130,3 @@ class Logger(object):
     def create_model(self, model, image_size):
         inputs = torch.randn((1, 3, image_size, image_size),device=device)
         self.writer.add_graph(model, input_to_model=inputs, verbose=False)
-        preds = model(inputs)
-

@@ -1,6 +1,6 @@
 import torch.nn
 
-from model.common_new2 import *
+from model.common_cifar import *
 
 # (ACS+ACS / ConvBN+ConvBN | shortcut) + relu
 class BasicBlock(nn.Module):

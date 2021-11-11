@@ -2,21 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3d13dee1-87ef-451d-97a2-017efde2cc99" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/model/common_cifar.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model/common_new2.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model/models_cifar.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model/models_new2.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/model/common_cifar2.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/model/models_cifar2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/c.txt" beforeDir="false" afterPath="$PROJECT_DIR$/c.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ind.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ind.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/common2.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/models_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/models_new.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/verify.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/verify.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/models_cifar.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/models_cifar.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train/trains.py" beforeDir="false" afterPath="$PROJECT_DIR$/train/trains.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/weight1.txt" beforeDir="false" afterPath="$PROJECT_DIR$/weight1.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/weight2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/weight2.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
