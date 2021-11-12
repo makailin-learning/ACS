@@ -1,5 +1,5 @@
 import argparse
-from model.models import *
+from model.models_resnet import *
 from utils.utils import test_preprocess
 import torchvision.datasets as datasets
 import torch.utils.data

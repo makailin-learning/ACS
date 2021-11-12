@@ -1,4 +1,4 @@
-from model.common import *
+from model.common_resnet import *
 
 # (ACS+ACS / ConvBN+ConvBN | shortcut) + relu
 class BasicBlock(nn.Module):
@@ -83,6 +83,7 @@ class ResNet(nn.Module):
         self.stage4 = self._make_stage(block, int(512 * width_multiplier), num_blocks[3], stride=1)
 
         # 目标检测时不要这两行
+        self.dp = nn.Dropout2d(p=0.2)
         self.gap = nn.AdaptiveAvgPool2d(output_size=1)
         self.linear = nn.Linear(int(512*block.expansion*width_multiplier), num_classes)
 
@@ -108,6 +109,7 @@ class ResNet(nn.Module):
         out = self.gap(out)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
+        out = self.dp(out)
         return out
 
 # acs_resnet
