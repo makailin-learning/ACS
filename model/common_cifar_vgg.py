@@ -93,7 +93,7 @@ class ACS(nn.Module):
         factor = self.sse(x)
         x = factor * x
         out = out + x
-        # out = self.drop(out)
+        out = self.drop(out)
         out = self.activation(out)
 
         return out

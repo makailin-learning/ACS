@@ -11,7 +11,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 def strong_train_preprocess(img_size):
     trans = transforms.Compose([
         # 随机大小、长宽比裁剪图片,随机裁剪面积比例，默认(0.08，1)
-        # transforms.RandomResizedCrop(img_size),
+        transforms.RandomResizedCrop(img_size),
         # 依据概率p对PIL图片进行水平翻转，p默认0.5
         transforms.RandomHorizontalFlip(),
         # 调整亮度、对比度、饱和度和色调 brightness,contrast,saturation,hue
@@ -27,9 +27,8 @@ def strong_train_preprocess(img_size):
 
 def standard_train_preprocess(img_size=224):
     trans = transforms.Compose([
-        # transforms.RandomResizedCrop(img_size),
+        transforms.RandomResizedCrop(img_size),
         transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(brightness=0.4, saturation=0.4, hue=0.4),
         transforms.ToTensor(),
         normalize,
     ])
@@ -38,7 +37,7 @@ def standard_train_preprocess(img_size=224):
 
 def val_preprocess(img_size=224):
     trans = transforms.Compose([
-        # transforms.Resize(img_size),
+        transforms.Resize(img_size),
         # transforms.CenterCrop(),
         transforms.ToTensor(),
         normalize,
@@ -77,21 +76,27 @@ class AverageMeter(object):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
 
+# num_batch=len(train_loader),meters=[batch_time, data_time, losses, top1, top5, optimizer.param_groups[0]['lr']], prefix="Epoch: [{}/{}]".format(epoch,args.epochs))
 class ProgressMeter(object):
     def __init__(self, num_batches, meters, prefix=""):
+        self.total_batch = num_batches
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
         self.meters = meters
         self.prefix = prefix
 
-    def display(self, batch):
+    def display(self, batch,time):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries))
+        entries = '\t'.join(entries)
+        entries += '\t[' + '=' * (batch // 1000 + 1) + '>' + ' ' * ((self.total_batch - batch) // 1000 -2) + ']'
+        entries += '\t[Epoch Remaining Time : {:.4f} min]'.format(time*(self.total_batch - batch)/60)
+        # print('\t'.join(entries),end='\r')
+        print(entries, end='\r')
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
-        return '[' + fmt + '/' + fmt.format(num_batches) + ']'
+        return '[' + fmt + '/' + fmt.format(num_batches) + ']' # [{:str(num_digits)d}/num_batches]
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""

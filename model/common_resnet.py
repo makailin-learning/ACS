@@ -15,12 +15,12 @@ class ConvBN(nn.Module):
         else:
             self.conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
             self.bn = nn.BatchNorm2d(num_features=in_channels)
-
+        self.dp = nn.Dropout2d(p=0.2)
     def forward(self, x):
         if hasattr(self, 'reparam'):
-            return self.activation(self.reparam(x))
+            return self.activation(self.dp(self.reparam(x)))
         else:
-            return self.activation(self.bn(self.conv(x)))
+            return self.activation(self.dp(self.bn(self.conv(x))))
 
     def switch_to_deploy(self):
         kernel, bias = I_fusebn(self.conv.weight, self.bn)

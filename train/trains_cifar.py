@@ -1,4 +1,7 @@
 import sys
+
+import torchvision.models
+
 sys.path.append('E://ACS//')
 # argparse 是 Python 内置的一个用于命令项选项与参数解析的模块
 import argparse
@@ -10,6 +13,7 @@ import random
 import shutil
 import time
 import warnings
+from math import cos,sin,pi
 
 # 并行计算模块
 import torch.nn.parallel
@@ -28,7 +32,7 @@ import torchvision.datasets as datasets
 # 根据epoch训练次数来调整学习率（learning rate）的方法
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.utils import AverageMeter, accuracy, ProgressMeter, val_preprocess, strong_train_preprocess, standard_train_preprocess
-from model.models_cifar2 import *
+from model.models_cifar_mkl import *
 from utils.utils import Logger
 
 IMAGENET_TRAINSET_SIZE = 1281167   # imagenet-1K数据集的图片训练张数
@@ -42,15 +46,17 @@ parser.add_argument('-t', '--blocktype', default='ACS', choices=['ACS', 'base'])
 parser.add_argument('--epochs', default=300, type=int,help='训练世代')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=128, type=int,help='训练批次数')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, help='初始学习率', dest='lr')
+parser.add_argument('--lr', '--learning-rate', default=0.01, type=float, help='初始学习率', dest='lr')
+parser.add_argument('--lr_min', '--learning-rate-min', default=0.0001, type=float, help='最小学习率', dest='lr_min')
 parser.add_argument('--momentum', default=0.9, type=float, help='优化动量')
-parser.add_argument('--wd', '--weight-decay', default=3*1e-4, type=float, help='优化衰减率',dest='weight_decay')
+parser.add_argument('--wd', '--weight-decay', default=5*1e-4, type=float, help='优化衰减率',dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=20, type=int, help='打印频次')
 parser.add_argument('--resume', default='', type=str, help='断点训练文件的路径')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',help='evaluate model on validation set')
 parser.add_argument('--is_acs', action='store_true', default=True, help='是否采用acs模块')
+parser.add_argument('--is_warmup', action='store_true', default=True, help='是否采用warmup模块')
 parser.add_argument('--seed', default=7, type=int,help='为训练初始化随机种子')
-parser.add_argument('--step_epochs', default=[90,180,240], type=list,help='学习率更改epoch')
+parser.add_argument('--step_epochs', default=[80,160,240], type=list,help='学习率更改epoch')
 parser.add_argument('--lr_decay', default=0.2, type=float,help='学习率衰减率')
 parser.add_argument('--image_size', default=32, type=int,help='训练图像尺寸')
 parser.add_argument('--log', type = str, default = 'E:/ACS/logs_test/', help = '配置日志地址')
@@ -74,9 +80,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #     optimizer = torch.optim.SGD(params, lr, momentum=momentum)
 #     return optimizer
 
-def sgd_optimizer(net, lr, momentum, weight_decay):
-    return torch.optim.SGD([v for v in net.parameters() if v.requires_grad],lr,momentum,weight_decay)
+def sgd_optimizer(net, lr, momentum = 0.9, weight_decay = 0.0005):
+    # return torch.optim.SGD([v for v in net.parameters() if v.requires_grad],lr,momentum,weight_decay)
+    return torch.optim.Adam(net.parameters(),lr=lr)
 
+def warmup_lr(optimizer,current_epoch,max_epoch,lr_min=0.,lr_max=0.1,warmup=True):
+    warmup_epoch = 10 if warmup else 0
+    if current_epoch < warmup_epoch:
+        lr = lr_max * current_epoch / warmup_epoch
+    else:
+        lr = lr_min + (lr_max-lr_min)*(1+cos(pi*(current_epoch-warmup_epoch)/(max_epoch-warmup_epoch)))/2
+    for param in optimizer.param_groups:
+        param['lr'] = lr
 
 def main():
     args = parser.parse_args()
@@ -97,15 +112,17 @@ def main():
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    net = Acs_Res18_s(is_acs=args.is_acs).to(device)
+    net = Acs_Res18_s(block=Bottleneck, num_blocks=[2,3,3], num_class=100, is_acs=args.is_acs).to(device)
+    # net = torchvision.models.resnet50(pretrained=True).to(device)
     log_dir = args.log
     log = Logger(log_dir)
     log.create_model(net, args.image_size)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
-
+    warmup_epoch = 10
     optimizer = sgd_optimizer(net, args.lr, args.momentum, args.weight_decay)
+
 
     # T——max为一次学习率周期的迭代次数，即 T_max 个 epoch 之后重新设置学习率
     # lr_scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs * CIFAR_TRAINSET_SIZE // args.batch_size)
@@ -181,13 +198,14 @@ def main():
         validate(val_loader, net, criterion, args)
         return
 
-    best_acc1 = 0
+    best_acc1 = 0.
 
     for epoch in range(args.start_epoch, args.epochs):
+        warmup_lr(optimizer,epoch,args.epochs,lr_min=args.lr_min,lr_max=args.lr,warmup=args.is_warmup)
+        # if epoch+1 in args.step_epochs:
+        #     lr = optimizer.param_groups[0]['lr']
+        #     optimizer = sgd_optimizer(net, lr * args.lr_decay, args.momentum, args.weight_decay)
 
-        if epoch+1 in args.step_epochs:
-            lr = optimizer.param_groups[0]['lr']
-            optimizer = sgd_optimizer(net, lr * args.lr_decay, args.momentum, args.weight_decay)
         # adjust_learning_rate(optimizer, epoch, args)
         # train for one epoch
         # train(train_loader, net, criterion, optimizer, epoch, args, lr_scheduler)
@@ -241,7 +259,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args, log):
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
 
-        train_list = [('train_losses', loss), ('train_top1', acc1), ('train_top5', acc5)]
+        train_list = [('train_losses', loss), ('train_top1', acc1), ('train_top5', acc5),('lr',optimizer.param_groups[0]['lr'])]
         log.list_of_scalars_summary(train_list, epoch*len(train_loader)+i)
 
         losses.update(loss.item(), images.size(0))

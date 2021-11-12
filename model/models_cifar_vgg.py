@@ -1,6 +1,6 @@
 import torch.nn
 
-from model.common_cifar2 import *
+from model.common_cifar_vgg import *
 
 # (ACS+ACS / ConvBN+ConvBN | shortcut) + relu
 class BasicBlock(nn.Module):
@@ -198,7 +198,7 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
 
         out = self.linear(out)
-        # out = self.drop(out)
+        out = self.drop(out)
         # with open('E:/ACS/weight1.txt', 'w') as f:
         #     print(w_up, file=f)
         # with open('E:/ACS/weight2.txt', 'w') as f:

@@ -1,4 +1,4 @@
-from model.common import *
+from model.common_resnet import *
 
 # (ACS+ACS / ConvBN+ConvBN | shortcut) + relu
 class BasicBlock(nn.Module):
