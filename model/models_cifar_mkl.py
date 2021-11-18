@@ -57,7 +57,7 @@ class Down(nn.Module):
         self.conv1.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
                                                 out_channels=self.out_ch,
                                                 kernel_size=1, stride=1, padding=0, bias=True))
-        self.conv1.add_module('drop', nn.Dropout2d(p=0.2))
+        # self.conv1.add_module('drop', nn.Dropout2d(p=0.2))
         self.conv1.add_module('bn', nn.BatchNorm2d(self.out_ch))
 
         # 分支2 3x3
@@ -65,7 +65,7 @@ class Down(nn.Module):
         self.conv3.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
                                                 out_channels=self.out_ch,
                                                 kernel_size=3, stride=2, padding=1, bias=True))
-        self.conv3.add_module('drop', nn.Dropout2d(p=0.2))
+        # self.conv3.add_module('drop', nn.Dropout2d(p=0.2))
         self.conv3.add_module('bn', nn.BatchNorm2d(self.out_ch))
 
         # 分支3 通道加权

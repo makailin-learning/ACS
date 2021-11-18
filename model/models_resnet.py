@@ -12,11 +12,12 @@ class BasicBlock(nn.Module):
         else:
             self.shortcut = nn.Identity()
         if is_acs:
-            self.conv1 = ACS(self.expansion * out_ch, kernel_size=3, deploy=False, activation=nn.ReLU())
-            self.conv2 = ACS(self.expansion * out_ch, kernel_size=3, deploy=False, activation=None)
+            self.conv1 = ACS(in_ch, out_ch, kernel_size=3, stride=stride,deploy=False, activation=nn.ReLU())
+            self.conv2 = ACS(out_ch, self.expansion * out_ch, kernel_size=3, deploy=False, activation=None)
         else:
-            self.conv1 = ConvBN(self.expansion * out_ch, kernel_size=3, deploy=False, activation=nn.ReLU())
-            self.conv2 = ConvBN(self.expansion * out_ch, kernel_size=3, deploy=False, activation=None)
+            # 第一个卷积需要进行下采样并提升一倍维度
+            self.conv1 = ConvBN(in_ch, out_ch, kernel_size=3, stride=stride, deploy=False, activation=nn.ReLU())
+            self.conv2 = ConvBN(out_ch, self.expansion * out_ch, kernel_size=3, deploy=False, activation=None)
 
     def forward(self, x):
         out = self.conv1(x)
@@ -44,23 +45,20 @@ class Bottleneck(nn.Module):
         self.conv1.add_module('relu',nn.ReLU())
         # 3x3 c-c 负责调整size,前后两个1x1负责调整通道数
         if is_acs:
-            self.conv2 = ACS(out_ch, kernel_size=3, stride=stride, padding=1, deploy=False, activation=nn.ReLU())
+            self.conv2 = ACS(out_ch, out_ch, kernel_size=3, stride=stride, padding=1, deploy=False, activation=nn.ReLU())
         else:
-            self.conv2 = ConvBN(out_ch,kernel_size=3, stride=stride, padding=1, deploy=False, activation=nn.ReLU())
+            self.conv2 = ConvBN(out_ch, out_ch, kernel_size=3, stride=stride, padding=1, deploy=False, activation=nn.ReLU())
         # 1x1 c-4c
         self.conv3 = nn.Sequential()
         self.conv3.add_module('conv1_1', nn.Conv2d(out_ch, self.expansion*out_ch, kernel_size=1))
         self.conv3.add_module('bn', nn.BatchNorm2d(self.expansion*out_ch))
 
     def forward(self, x):
-        # print('模块输入结果', x.shape)
         out = self.conv1(x)
         out = self.conv2(out)
         out = self.conv3(out)
         out += self.shortcut(x)
         out = F.relu(out)
-        # print('模块输出结果',out.shape)
-        # print('\n')
         return out
 
 class ResNet(nn.Module):
@@ -75,15 +73,15 @@ class ResNet(nn.Module):
         self.stage0.add_module('conv1', nn.Conv2d(in_channels=3, out_channels=self.in_ch, kernel_size=7, stride=2, padding=3))
         self.stage0.add_module('bn',nn.BatchNorm2d(self.in_ch))
         self.stage0.add_module('relu',nn.ReLU(inplace=True))
-        self.stage0.add_module('maxpool', nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
 
+        self.mxp = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # stage1不进行下采样，通道数为64的下采样在mxp处进行了
         self.stage1 = self._make_stage(block, int(64 * width_multiplier), num_blocks[0], stride=1)
-        self.stage2 = self._make_stage(block, int(128 * width_multiplier), num_blocks[1], stride=1)
-        self.stage3 = self._make_stage(block, int(256 * width_multiplier), num_blocks[2], stride=1)
-        self.stage4 = self._make_stage(block, int(512 * width_multiplier), num_blocks[3], stride=1)
+        self.stage2 = self._make_stage(block, int(128 * width_multiplier), num_blocks[1], stride=2)
+        self.stage3 = self._make_stage(block, int(256 * width_multiplier), num_blocks[2], stride=2)
+        self.stage4 = self._make_stage(block, int(512 * width_multiplier), num_blocks[3], stride=2)
 
         # 目标检测时不要这两行
-        self.dp = nn.Dropout2d(p=0.2)
         self.gap = nn.AdaptiveAvgPool2d(output_size=1)
         self.linear = nn.Linear(int(512*block.expansion*width_multiplier), num_classes)
 
@@ -102,30 +100,32 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         out = self.stage0(x)
+        print('0',out.shape)
+        out = self.mxp(out)
+        print('0-1',out.shape)
         out = self.stage1(out)
+        print('1',out.shape)
         out = self.stage2(out)
+        print('2',out.shape)
         out = self.stage3(out)
+        print('3',out.shape)
         out = self.stage4(out)
+        print('4',out.shape)
         out = self.gap(out)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
-        out = self.dp(out)
         return out
 
 # acs_resnet
 
+def Acs_Res18(is_acs=False):
+    return ResNet(BasicBlock, [2,2,2,2], num_classes=1000, width_multiplier=1, is_acs=is_acs)
 
-def Acs_Res18_s(is_acs=False):
-    return ResNet(Bottleneck, [2,3,4,3], num_classes=10, width_multiplier=0.5, is_acs=is_acs)
+def Acs_Res34(is_acs=False):
+    return ResNet(BasicBlock, [3,4,6,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)
 
-def Acs_Res18_l(is_acs=False):
-    return ResNet(Bottleneck, [2,3,4,3], num_classes=100, width_multiplier=1, is_acs=is_acs)
-
-def Acs_Res50_s(is_acs=False):
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=100, width_multiplier=0.5, is_acs=is_acs)
-
-def Acs_Res50_l(is_acs=False):
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=100, width_multiplier=1, is_acs=is_acs)
+def Acs_Res50(is_acs=False):
+    return ResNet(Bottleneck, [3,4,6,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)
 
 def Acs_Res101(is_acs=False):
-    return ResNet(Bottleneck, [3,4,23,3], num_classes=100, width_multiplier=1, is_acs=is_acs)
+    return ResNet(Bottleneck, [3,4,23,3], num_classes=1000, width_multiplier=1, is_acs=is_acs)

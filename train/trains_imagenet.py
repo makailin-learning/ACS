@@ -33,7 +33,7 @@ import torchvision.datasets as datasets
 # 根据epoch训练次数来调整学习率（learning rate）的方法
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from utils.utils import AverageMeter, accuracy, ProgressMeter, val_preprocess, strong_train_preprocess, standard_train_preprocess
-from model.models_cifar_mkl import *
+from model.models_resnet import *
 from utils.utils import Logger
 
 IMAGENET_TRAINSET_SIZE = 1281167   # imagenet-1K数据集的图片训练张数
@@ -46,9 +46,9 @@ parser.add_argument('-a', '--arch', default='ResNet') # 使用 metavar 来指定
 parser.add_argument('-t', '--blocktype', default='ACS', choices=['ACS', 'base'])
 parser.add_argument('--epochs', default=120, type=int,help='训练世代')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=48, type=int,help='训练批次数')
+parser.add_argument('-b', '--batch-size', default=64, type=int,help='训练批次数')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, help='初始学习率', dest='lr')
-parser.add_argument('--lr_min', '--learning-rate-min', default=0.0001, type=float, help='最小学习率', dest='lr_min')
+parser.add_argument('--lr_min', '--learning-rate-min', default=0.00001, type=float, help='最小学习率', dest='lr_min')
 parser.add_argument('--momentum', default=0.9, type=float, help='优化动量')
 parser.add_argument('--wd', '--weight-decay', default=3*1e-4, type=float, help='优化衰减率',dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=20, type=int, help='打印频次')
@@ -88,7 +88,7 @@ def sgd_optimizer(net, lr, momentum, weight_decay):
 def warmup_lr(optimizer,current_epoch,max_epoch,lr_min=0.,lr_max=0.1,warmup=True):
     warmup_epoch = 5 if warmup else 0
     if current_epoch < warmup_epoch:
-        lr = lr_max * current_epoch / warmup_epoch
+        lr = max(lr_min, lr_max * current_epoch / warmup_epoch)
     else:
         lr = lr_min + (lr_max-lr_min)*(1+cos(pi*(current_epoch-warmup_epoch)/(max_epoch-warmup_epoch)))/2
     for param in optimizer.param_groups:
@@ -113,7 +113,7 @@ def main():
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
-    net = Acs_Res18_s(block=Bottleneck, num_blocks=[4,5,5], num_class=1000, is_acs=args.is_acs).to(device)
+    net = Acs_Res18(is_acs=args.is_acs).to(device)
     # net = torchvision.models.resnet50(pretrained=True).to(device)
     log_dir = args.log
     log = Logger(log_dir)
@@ -121,7 +121,6 @@ def main():
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
-    warmup_epoch = 10
     optimizer = sgd_optimizer(net, args.lr, args.momentum, args.weight_decay)
 
     # T——max为一次学习率周期的迭代次数，即 T_max 个 epoch 之后重新设置学习率
@@ -194,12 +193,12 @@ def main():
     val_loader = torch.utils.data.DataLoader(val_dataset,batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
     if args.evaluate:
-        validate(val_loader, net, criterion, args)
+        validate(val_loader, net, args.epochs, criterion, args, log)
         return
 
     best_acc1 = 0.
     acc1 = 0.
-
+    print(device,end='\n')
     for epoch in range(args.start_epoch, args.epochs):
         warmup_lr(optimizer,epoch,args.epochs,lr_min=args.lr_min,lr_max=args.lr,warmup=args.is_warmup)
 
@@ -246,7 +245,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args, log):
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
         # measure data loading time
-        start = time.time()
+        if i % args.print_freq == 0:
+            start = time.time()
         data_time.update(time.time() - end)
 
         images = images.to(device)
@@ -278,10 +278,9 @@ def train(train_loader, model, criterion, optimizer, epoch, args, log):
         # lr_scheduler.step()
 
         if i % args.print_freq == 0:
-            progress.display(i,end-start)
+            progress.display(i,time.time()-start)
         # if i % 1000 == 0:
             # print('cur lr: ', lr_scheduler.get_lr()[0])
-
 
 def validate(val_loader, model, epoch, criterion, args, log):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -319,7 +318,7 @@ def validate(val_loader, model, epoch, criterion, args, log):
             end = time.time()
 
             if i % args.print_freq == 0:
-                progress.display(i,end-start)
+                progress.display(i,time.time()-start)
 
         # TODO: this should also be done with the ProgressMeter
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'.format(top1=top1, top5=top5))
