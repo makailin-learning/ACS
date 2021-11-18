@@ -112,7 +112,11 @@ def main():
                       'You may see unexpected behavior when restarting '
                       'from checkpoints.')
 
+<<<<<<< HEAD:train/trains_cifar.py
     net = Acs_Res18_s(block=Bottleneck, num_blocks=[2,3,3], num_class=100, is_acs=args.is_acs).to(device)
+=======
+    net = Acs_Res18_s(is_acs=args.is_acs).to(device)
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090:train/trains.py
     # net = torchvision.models.resnet50(pretrained=True).to(device)
     log_dir = args.log
     log = Logger(log_dir)

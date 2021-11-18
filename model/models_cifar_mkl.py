@@ -57,7 +57,10 @@ class Down(nn.Module):
         self.conv1.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
                                                 out_channels=self.out_ch,
                                                 kernel_size=1, stride=1, padding=0, bias=True))
+<<<<<<< HEAD
         # self.conv1.add_module('drop', nn.Dropout2d(p=0.2))
+=======
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         self.conv1.add_module('bn', nn.BatchNorm2d(self.out_ch))
 
         # 分支2 3x3
@@ -65,7 +68,10 @@ class Down(nn.Module):
         self.conv3.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
                                                 out_channels=self.out_ch,
                                                 kernel_size=3, stride=2, padding=1, bias=True))
+<<<<<<< HEAD
         # self.conv3.add_module('drop', nn.Dropout2d(p=0.2))
+=======
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         self.conv3.add_module('bn', nn.BatchNorm2d(self.out_ch))
 
         # 分支3 通道加权
@@ -74,7 +80,10 @@ class Down(nn.Module):
         self.sse.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
                                               out_channels=self.out_ch,
                                               kernel_size=1, stride=1, padding=0, bias=True))
+<<<<<<< HEAD
         self.sse.add_module('drop', nn.Dropout2d(p=0.2))
+=======
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         self.sse.add_module('bn',nn.BatchNorm2d(self.out_ch))
         self.sse.add_module('sig', nn.Sigmoid())
 
@@ -91,12 +100,17 @@ class Down(nn.Module):
         return x
 
 class Down_Fuse(nn.Module):
+<<<<<<< HEAD
     def __init__(self, in_ch, width_multiplier, is_down = False):
+=======
+    def __init__(self, in_ch, width_multiplier):
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         super(Down_Fuse, self).__init__()
 
         self.in_ch = int(in_ch * 2 * width_multiplier)
         # 分支1 1x1
         self.conv1 = nn.Sequential()
+<<<<<<< HEAD
         if is_down:
             self.conv1.add_module('avg',nn.AvgPool2d(kernel_size=2,stride=2))
         self.conv1.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
@@ -115,14 +129,30 @@ class Down_Fuse(nn.Module):
                                                     out_channels=self.in_ch,
                                                     kernel_size=3, stride=1, padding=1, bias=True))
         self.conv3.add_module('drop', nn.Dropout2d(p=0.2))
+=======
+        self.conv1.add_module('avg',nn.AvgPool2d(kernel_size=2,stride=2))
+        self.conv1.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
+                                                out_channels=self.in_ch,
+                                                kernel_size=1, stride=1, padding=0, groups=2, bias=True))
+        self.conv1.add_module('bn', nn.BatchNorm2d(self.in_ch))
+        # 分支2 3x3
+        self.conv3 = nn.Sequential()
+        self.conv3.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
+                                                out_channels=self.in_ch,
+                                                kernel_size=3, stride=2, padding=1, groups=2, bias=True))
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         self.conv3.add_module('bn', nn.BatchNorm2d(self.in_ch))
         # 分支3 通道加权
         self.sse = nn.Sequential()
         self.sse.add_module('avg', nn.AdaptiveAvgPool2d(output_size=1))
         self.sse.add_module('conv', nn.Conv2d(in_channels=self.in_ch,
                                               out_channels=self.in_ch,
+<<<<<<< HEAD
                                               kernel_size=1, stride=1, padding=0, bias=True))
         self.sse.add_module('drop', nn.Dropout2d(p=0.2))
+=======
+                                              kernel_size=1, stride=1, padding=0, groups=2, bias=True))
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         self.sse.add_module('bn', nn.BatchNorm2d(self.in_ch))
         self.sse.add_module('sig', nn.Sigmoid())
         # 分支融合后激活
@@ -130,7 +160,11 @@ class Down_Fuse(nn.Module):
 
     def forward(self,x,y):
         if y is None:
+<<<<<<< HEAD
             print('缺失融合端的输入张量y')
+=======
+            print('确实融合端的输入张量y')
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
 
         x = torch.cat((x,y),dim=1)
         x1 = self.conv1(x)
@@ -148,6 +182,7 @@ class ResNet(nn.Module):
         self.in_ch = int(64 * width_multiplier)
         self.is_acs = is_acs
 
+<<<<<<< HEAD
         self.stage0 = Down(3,width_multiplier,64)
         # 7x7卷积扩展通道数3->64 ，最大池化降采样 32->16
 
@@ -166,6 +201,26 @@ class ResNet(nn.Module):
         self.down_4_2 = Down_Fuse(256, width_multiplier, is_down=True)  # 融合同时降一倍尺寸 1x256x28x28 - 1x512x14x14
         self.down_2_1 = Down_Fuse(512, width_multiplier, is_down=False) # 融合但是不降尺寸   1x512x14x14 - 1x1024x14x14
         self.down_1_0 = Down(1024,width_multiplier)
+=======
+        self.stage0 = Down(3,width_multiplier,128)
+        # 7x7卷积扩展通道数3->64 ，最大池化降采样 32->16
+
+        # 卷积扩展通道数64->128 ， 最大池化降采样 16->8
+        self.stream1 = Down(128, width_multiplier)
+        # 卷积扩展通道数128->256 ，最大池化降采样 8->4
+        self.stream2 = Down(256, width_multiplier)
+        # 卷积扩展通道数256->512 ， 最大池化降采样 4->2
+        self.stream3 = Down(512, width_multiplier)
+
+        self.stage1 = self._make_stage(block, int(256 * width_multiplier), num_blocks[0], stride=1) # 2个1x128x8x8
+        self.stage2 = self._make_stage(block, int(512 * width_multiplier), num_blocks[1], stride=1) # 2个1x256x4x4
+        self.stage3 = self._make_stage(block, int(1024 * width_multiplier), num_blocks[2], stride=1) # 1个1x512x2x2
+
+        self.down_8_4 = Down(256, width_multiplier)
+        self.down_4_2 = Down_Fuse(512, width_multiplier)
+        self.down_2_1 = Down_Fuse(1024, width_multiplier)
+        # self.down_1_0 = Down(2048,width_multiplier)
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
 
         # 后处理
         self.drop = nn.Dropout2d(p=0.2)
@@ -203,6 +258,7 @@ class ResNet(nn.Module):
         out1 = self.down_8_4(out1)
         fuse_1_2 = self.down_4_2(out2,out1)
         fuse_2_3 = self.down_2_1(out3,fuse_1_2)
+<<<<<<< HEAD
         fuse_3_4 = self.down_1_0(fuse_2_3)
 
         out = self.gap(fuse_3_4)
@@ -214,6 +270,23 @@ class ResNet(nn.Module):
 
 def Acs_Res18_s(block=Bottleneck,num_blocks=[4,5,5],num_class=1000,is_acs=False):
     return ResNet(block=block, num_blocks=num_blocks, num_classes=num_class, width_multiplier=1, is_acs=is_acs)
+=======
+        # out = self.down_1_0(fuse_2_3)
+
+        out = self.gap(fuse_2_3)
+        out = out.view(out.size(0), -1)
+
+        out = self.linear(out)
+        out = self.drop(out)
+        # with open('E:/ACS/weight1.txt', 'w') as f:
+        #     print(w_up, file=f)
+        # with open('E:/ACS/weight2.txt', 'w') as f:
+        #     print(w_down, file=f)
+        return out
+
+def Acs_Res18_s(is_acs=False):
+    return ResNet(Bottleneck, [3,4,4], num_classes=100, width_multiplier=1, is_acs=is_acs)
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
 
 # def Acs_Res50_l(is_acs=False):
 #     return ResNet(Bottleneck, [4,5,5], num_classes=100, width_multiplier=1, is_acs=is_acs)

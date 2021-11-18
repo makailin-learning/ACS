@@ -39,8 +39,11 @@ class ACS(nn.Module):
         super(ACS,self).__init__()
 
         self.deploy = deploy
+<<<<<<< HEAD
         self.is_cat = False
 
+=======
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         mid_channels = in_channels // 2
         self.kernel_size = kernel_size
 
@@ -53,6 +56,7 @@ class ACS(nn.Module):
 
         # 推理时过一个融合分支reparam
         if deploy:
+<<<<<<< HEAD
             self.acs_reparam = nn.Conv2d(in_channels=mid_channels, out_channels=mid_channels,
                                          kernel_size=kernel_size, stride=stride, padding=padding, bias=True)
         else:
@@ -93,12 +97,49 @@ class ACS(nn.Module):
 
         self.bn = nn.BatchNorm2d(in_channels)
         self.avg = nn.AdaptiveAvgPool2d(output_size=1)
+=======
+            self.acs_reparam = nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
+                                         kernel_size=kernel_size, stride=stride, padding=padding, bias=True)
+        else:
+
+            # 1x1-bn-3x3-bn分支
+            self.acs_3x3 = nn.Sequential()
+            self.acs_3x3.add_module("conv1",nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
+                                                      kernel_size=1, stride=1, padding=0, bias=False))
+            self.acs_3x3.add_module("bn1", nn.BatchNorm2d(in_channels))
+            self.acs_3x3.add_module("conv3",nn.Conv2d(in_channels=in_channels,out_channels=in_channels,
+                                                      kernel_size=kernel_size, stride=stride, padding=padding, bias=False))
+            self.acs_3x3.add_module("bn2", nn.BatchNorm2d(in_channels))
+
+            # 3x3分支
+            self.acs_main = nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
+                                      kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
+            self.acs_main_bn = nn.BatchNorm2d(in_channels)
+
+            # 1x1-bn-avg分支
+            self.acs_avg = nn.Sequential()
+            self.acs_avg.add_module("conv1",nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
+                                                      kernel_size=1, stride=1, padding=0, bias=False))
+            self.acs_avg.add_module("bn1",nn.BatchNorm2d(in_channels))
+            self.acs_avg.add_module("avg",nn.AvgPool2d(kernel_size=kernel_size, stride=stride, padding=padding))
+            self.acs_avg.add_module("bn2", nn.BatchNorm2d(in_channels))
+        # 并行分支
+        self.sse = nn.Sequential()
+        self.sse.add_module('avg',nn.AdaptiveAvgPool2d(output_size=1))
+        self.sse.add_module('conv',nn.Conv2d(in_channels=in_channels,out_channels=in_channels,
+                                             kernel_size=1,stride=1,padding=0,bias=True))
+        self.sse.add_module('bn',nn.BatchNorm2d(in_channels))
+        self.sse.add_module('sig',nn.Sigmoid())
+
+        self.bn = nn.BatchNorm2d(in_channels)
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
         self.drop = nn.Dropout2d(p=0.2)
         """
         torch.nn.Parameter是继承自torch.Tensor的子类，其主要作用是作为nn.Module中的可训练参数使用。
         它与torch.Tensor的区别就是nn.Parameter会自动被认为是module的可训练参数，即加入到parameter()这个迭代器中去。
         而module中非nn.Parameter()的普通tensor是不在parameter中的。
         """
+<<<<<<< HEAD
     def acs(self,n,c,y):
         factor = self.avg(y)
         factor = torch.sigmoid(factor)
@@ -139,6 +180,31 @@ class ACS(nn.Module):
         y = self.activation(y)
 
         return y
+=======
+
+    def forward(self,x):
+
+        if hasattr(self, 'acs_reparam'):
+            out = self.acs_reparam(x)
+        else:
+
+            acs_main = self.acs_main(x)
+            acs_3x3 = self.acs_3x3(x)
+            acs_avg = self.acs_avg(x)
+            out = acs_main+acs_3x3+acs_avg
+
+        x = self.bn(x)
+        factor1 = self.sse(x)
+        x = factor1 * x
+        out1 = out + x
+        out1 = self.activation(out1)
+        factor2 = self.sse(out1)
+        out = out * factor2
+        out = self.drop(out)
+        out = self.activation(out)
+
+        return out
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
 
     # TODO 融合有问题，再阅读DBB代码
     # 注意该函数融合的是所有权重的数据torch.tensor 而不是可训练数据张量 torch.paramtemers.tensor
@@ -159,12 +225,18 @@ class ACS(nn.Module):
         k_1x1_avg_first, b_1x1_avg_first = I_fusebn(self.acs_avg.conv1.weight, self.acs_avg.bn1)
         k_1x1_avg_fuse, b_1x1_avg_fuse = III_1x1_3x3(k_1x1_avg_first, b_1x1_avg_first,
                                                      k_1x1_avg_second, b_1x1_avg_second)
+<<<<<<< HEAD
         if self.is_cat:
             return IV_concat((k_main_fuse, k_1x1_3x3_fuse, k_1x1_avg_fuse),
                                 (b_main_fuse, b_1x1_3x3_fuse, b_1x1_avg_fuse))
         else:
             return II_addbranch((k_main_fuse, k_1x1_3x3_fuse, k_1x1_avg_fuse),
                                 (b_main_fuse, b_1x1_3x3_fuse, b_1x1_avg_fuse))
+=======
+
+        return II_addbranch((k_main_fuse, k_1x1_3x3_fuse, k_1x1_avg_fuse),
+                            (b_main_fuse, b_1x1_3x3_fuse, b_1x1_avg_fuse))
+>>>>>>> 6229e39838423396b703141eb8cbb404f6c79090
 
     def switch_to_deploy(self):
         if hasattr(self, 'acs_reparam'):
